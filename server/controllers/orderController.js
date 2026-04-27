@@ -2,18 +2,18 @@ const db = require('../db');
 const kotService = require('../services/kotService');
 
 const createOrder = (req, res) => {
-  const { tableId, items, notes } = req.body;
+  const { tableId, items, notes, customerName } = req.body;
   // items: [{ menuItemId, quantity, specialNotes, price }]
 
   try {
-    const insertOrder = db.prepare('INSERT INTO orders (table_id, total_amount) VALUES (?, ?)');
+    const insertOrder = db.prepare('INSERT INTO orders (table_id, total_amount, customer_name) VALUES (?, ?, ?)');
     const insertOrderItem = db.prepare('INSERT INTO order_items (order_id, menu_item_id, quantity, special_notes) VALUES (?, ?, ?, ?)');
     
     const total_amount = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
     let orderId;
     db.transaction(() => {
-      const orderInfo = insertOrder.run(tableId, total_amount);
+      const orderInfo = insertOrder.run(tableId, total_amount, customerName || 'Guest');
       orderId = orderInfo.lastInsertRowid;
       
       for (const item of items) {

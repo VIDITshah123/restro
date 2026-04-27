@@ -1,0 +1,4 @@
+- [x] add a customize option for everydish.....customization should include radio options which are : jain, half jain, less spicy & without mushroom if dish contains mushroom & a small text box so that customer can write by their own
+- [x] admin can also manage categories in menu section
+- [x] admin can add, edit or delete from items in menu
+- [x] while placing order, it should ask customer about its name 

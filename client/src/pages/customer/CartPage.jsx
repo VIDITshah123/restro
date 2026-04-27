@@ -11,6 +11,7 @@ const CartPage = () => {
   const { setOrder } = useOrderStore();
   const [upsells, setUpsells] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [customerName, setCustomerName] = useState('');
 
   useEffect(() => {
     const fetchUpsells = async () => {
@@ -32,10 +33,15 @@ const CartPage = () => {
 
   const placeOrder = async () => {
     if (!tableId || items.length === 0) return;
+    if (!customerName.trim()) {
+      alert('Please enter your name to place the order.');
+      return;
+    }
     setIsSubmitting(true);
     try {
       const res = await api.post('/orders', {
         tableId,
+        customerName: customerName.trim(),
         items: items.map(i => ({
           menuItemId: i.menuItemId,
           quantity: i.quantity,
@@ -127,6 +133,13 @@ const CartPage = () => {
           <span className="font-semibold text-gray-600">Grand Total</span>
           <span className="text-2xl font-bold">₹{getTotal()}</span>
         </div>
+        <input 
+          type="text" 
+          placeholder="Your Name (Required)" 
+          value={customerName}
+          onChange={(e) => setCustomerName(e.target.value)}
+          className="w-full mb-3 text-sm p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-black"
+        />
         <button 
           onClick={placeOrder}
           disabled={isSubmitting}

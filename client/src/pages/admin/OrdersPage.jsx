@@ -25,6 +25,7 @@ const OrdersPage = () => {
             <tr>
               <th className="p-4">Order ID</th>
               <th className="p-4">Table</th>
+              <th className="p-4">Customer</th>
               <th className="p-4">Total</th>
               <th className="p-4">Status</th>
               <th className="p-4">Time</th>
@@ -35,6 +36,7 @@ const OrdersPage = () => {
               <tr key={order.id} className="hover:bg-gray-50">
                 <td className="p-4 font-bold">#{order.id}</td>
                 <td className="p-4">{order.table_number}</td>
+                <td className="p-4">{order.customer_name || 'Guest'}</td>
                 <td className="p-4 font-medium">₹{order.total_amount}</td>
                 <td className="p-4">
                   <span className={`px-2 py-1 rounded-full text-xs font-bold uppercase

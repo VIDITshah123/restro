@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS menu_items (
 CREATE TABLE IF NOT EXISTS orders (
   id           INTEGER PRIMARY KEY AUTOINCREMENT,
   table_id     INTEGER NOT NULL REFERENCES tables(id),
+  customer_name TEXT,
   status       TEXT    NOT NULL DEFAULT 'placed',
     -- placed | preparing | ready | served
   total_amount REAL    NOT NULL DEFAULT 0,

@@ -20,6 +20,31 @@ const MenuPage = () => {
   const [trending, setTrending] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
 
+  const [customizingItem, setCustomizingItem] = useState(null);
+  const [customOptions, setCustomOptions] = useState({ variant: 'Standard', spicy: 'Standard', noMushroom: false, text: '' });
+
+  const handleAddClick = (item) => {
+    setCustomizingItem(item);
+    setCustomOptions({ variant: 'Standard', spicy: 'Standard', noMushroom: false, text: '' });
+  };
+
+  const confirmAdd = () => {
+    let notes = [];
+    if (customOptions.variant !== 'Standard') notes.push(customOptions.variant);
+    if (customOptions.spicy !== 'Standard') notes.push(customOptions.spicy);
+    if (customOptions.noMushroom) notes.push('Without Mushroom');
+    if (customOptions.text) notes.push(customOptions.text);
+    
+    addItem({ 
+      menuItemId: customizingItem.id, 
+      name: customizingItem.name, 
+      price: customizingItem.price, 
+      is_veg: customizingItem.is_veg,
+      specialNotes: notes.join(', ')
+    });
+    setCustomizingItem(null);
+  };
+
   useEffect(() => {
     const init = async () => {
       try {
@@ -123,7 +148,7 @@ const MenuPage = () => {
                 </div>
                 <p className="text-gray-500 mt-1">₹{item.price}</p>
                 <button 
-                  onClick={() => addItem({ menuItemId: item.id, name: item.name, price: item.price, is_veg: item.is_veg })}
+                  onClick={() => handleAddClick(item)}
                   className="w-full mt-2 bg-black text-white py-1 rounded-lg text-sm"
                 >
                   Add
@@ -161,7 +186,7 @@ const MenuPage = () => {
               )}
               <button 
                 disabled={!item.is_available}
-                onClick={() => addItem({ menuItemId: item.id, name: item.name, price: item.price, is_veg: item.is_veg })}
+                onClick={() => handleAddClick(item)}
                 className="mt-2 bg-red-50 text-red-600 font-medium px-6 py-1.5 rounded-lg border border-red-200 shadow-sm"
               >
                 ADD
@@ -170,6 +195,75 @@ const MenuPage = () => {
           </motion.div>
         ))}
       </div>
+
+      {/* Customization Modal */}
+      {customizingItem && (
+        <div className="fixed inset-0 bg-black/50 z-[100] flex items-end sm:items-center justify-center">
+          <div className="bg-white w-full sm:w-[400px] sm:rounded-2xl rounded-t-2xl p-5 pb-safe animate-in slide-in-from-bottom-full sm:slide-in-from-bottom-0 sm:fade-in-0 duration-300">
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h2 className="text-xl font-bold">{customizingItem.name}</h2>
+                <p className="text-gray-500 text-sm">Customize your order</p>
+              </div>
+              <button onClick={() => setCustomizingItem(null)} className="text-gray-400 p-1">✕</button>
+            </div>
+            
+            <div className="space-y-4 max-h-[60vh] overflow-y-auto pb-4">
+              {/* Variant Radio */}
+              <div>
+                <h3 className="font-semibold mb-2">Variant</h3>
+                <div className="flex gap-3">
+                  {['Standard', 'Jain', 'Half Jain'].map(opt => (
+                    <label key={opt} className="flex items-center gap-2 cursor-pointer">
+                      <input type="radio" name="variant" checked={customOptions.variant === opt} onChange={() => setCustomOptions(p => ({ ...p, variant: opt }))} className="accent-black" />
+                      <span className="text-sm">{opt}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Spice Level Radio */}
+              <div>
+                <h3 className="font-semibold mb-2">Spice Level</h3>
+                <div className="flex gap-3">
+                  {['Standard', 'Less Spicy'].map(opt => (
+                    <label key={opt} className="flex items-center gap-2 cursor-pointer">
+                      <input type="radio" name="spicy" checked={customOptions.spicy === opt} onChange={() => setCustomOptions(p => ({ ...p, spicy: opt }))} className="accent-black" />
+                      <span className="text-sm">{opt}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Extra Checkbox */}
+              {customizingItem.name.toLowerCase().includes('mushroom') && (
+                <div>
+                  <label className="flex items-center gap-2 cursor-pointer font-semibold">
+                    <input type="checkbox" checked={customOptions.noMushroom} onChange={(e) => setCustomOptions(p => ({ ...p, noMushroom: e.target.checked }))} className="accent-black w-4 h-4" />
+                    Without Mushroom
+                  </label>
+                </div>
+              )}
+
+              {/* Special Instructions Text Box */}
+              <div>
+                <h3 className="font-semibold mb-2">Special Instructions</h3>
+                <textarea 
+                  rows="2"
+                  placeholder="Write any specific preferences here..."
+                  value={customOptions.text}
+                  onChange={(e) => setCustomOptions(p => ({ ...p, text: e.target.value }))}
+                  className="w-full border rounded-lg p-2 text-sm focus:outline-none focus:ring-1 focus:ring-black"
+                ></textarea>
+              </div>
+            </div>
+
+            <button onClick={confirmAdd} className="w-full bg-black text-white font-bold py-3 rounded-xl mt-2">
+              Add to Cart - ₹{customizingItem.price}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

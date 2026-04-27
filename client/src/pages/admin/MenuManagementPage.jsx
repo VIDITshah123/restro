@@ -3,11 +3,26 @@ import api from '../../api';
 
 const MenuManagementPage = () => {
   const [menu, setMenu] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
+  
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    price: '',
+    category: '',
+    image_url: '',
+    is_veg: 1,
+    is_available: 1
+  });
 
   const fetchMenu = async () => {
     try {
       const res = await api.get('/menu');
       setMenu(res.data.data);
+      const catRes = await api.get('/menu/categories');
+      setCategories(catRes.data.data);
     } catch (err) {
       console.error(err);
     }
@@ -26,9 +41,60 @@ const MenuManagementPage = () => {
     }
   };
 
+  const handleOpenModal = (item = null) => {
+    if (item) {
+      setEditingItem(item);
+      setFormData({
+        name: item.name,
+        description: item.description || '',
+        price: item.price,
+        category: item.category,
+        image_url: item.image_url || '',
+        is_veg: item.is_veg,
+        is_available: item.is_available
+      });
+    } else {
+      setEditingItem(null);
+      setFormData({
+        name: '', description: '', price: '', category: '', image_url: '', is_veg: 1, is_available: 1
+      });
+    }
+    setIsModalOpen(true);
+  };
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    try {
+      if (editingItem) {
+        await api.put(`/menu/${editingItem.id}`, formData);
+      } else {
+        await api.post('/menu', formData);
+      }
+      setIsModalOpen(false);
+      fetchMenu();
+    } catch (err) {
+      alert('Error saving menu item');
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!confirm('Are you sure you want to delete this item?')) return;
+    try {
+      await api.delete(`/menu/${id}`);
+      fetchMenu();
+    } catch (err) {
+      alert('Error deleting item');
+    }
+  };
+
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">Menu Management</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Menu Management</h1>
+        <button onClick={() => handleOpenModal()} className="bg-black text-white px-4 py-2 rounded-lg font-medium">
+          + Add New Item
+        </button>
+      </div>
       
       <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
         <table className="w-full text-left">
@@ -39,6 +105,7 @@ const MenuManagementPage = () => {
               <th className="p-4">Price</th>
               <th className="p-4">Type</th>
               <th className="p-4">Available</th>
+              <th className="p-4 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -64,11 +131,65 @@ const MenuManagementPage = () => {
                     }`} />
                   </button>
                 </td>
+                <td className="p-4 text-right space-x-2">
+                  <button onClick={() => handleOpenModal(item)} className="text-blue-600 hover:text-blue-800 text-sm font-medium">Edit</button>
+                  <button onClick={() => handleDelete(item.id)} className="text-red-600 hover:text-red-800 text-sm font-medium">Delete</button>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6">
+            <h2 className="text-xl font-bold mb-4">{editingItem ? 'Edit Item' : 'Add New Item'}</h2>
+            <form onSubmit={handleSave} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Name</label>
+                <input required type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full border rounded-lg p-2" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Price (₹)</label>
+                  <input required type="number" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} className="w-full border rounded-lg p-2" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Category</label>
+                  <input required list="categories" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} className="w-full border rounded-lg p-2" placeholder="e.g. Starters" />
+                  <datalist id="categories">
+                    {categories.map(c => <option key={c} value={c} />)}
+                  </datalist>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Description</label>
+                <textarea rows="2" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="w-full border rounded-lg p-2"></textarea>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Image URL</label>
+                <input type="text" value={formData.image_url} onChange={e => setFormData({...formData, image_url: e.target.value})} className="w-full border rounded-lg p-2" />
+              </div>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" name="is_veg" checked={formData.is_veg === 1} onChange={() => setFormData({...formData, is_veg: 1})} className="accent-black" />
+                  <span className="text-sm font-medium text-green-700">Veg</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" name="is_veg" checked={formData.is_veg === 0} onChange={() => setFormData({...formData, is_veg: 0})} className="accent-black" />
+                  <span className="text-sm font-medium text-red-700">Non-Veg</span>
+                </label>
+              </div>
+              
+              <div className="flex justify-end gap-3 pt-4 mt-2 border-t">
+                <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 border rounded-lg font-medium">Cancel</button>
+                <button type="submit" className="px-4 py-2 bg-black text-white rounded-lg font-medium">Save Item</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
