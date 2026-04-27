@@ -1,34 +1,40 @@
 # Todo - Restro Management System
 
-## 1. Admin Order & Billing Management
-- [x] Admin can view all orders with customer details (who ordered what)
-- [x] Admin can generate bills for individual tables after order is placed
-- [x] Admin can change table status:
-  - 'free' → 'occupied' when customer places order
-  - 'occupied' → 'free' after bill is generated
-- [x] Ordered items during the dining session are added to the bill for the respective table
+## 1. Waiter Management
+- [x] Admin can create waiter accounts (userid & password)
+- [x] Admin can perform CRUD operations on waiter credentials
+- [x] Waiter can login with their credentials
+- [x] Waiter receives notification when their assigned order is ready for service
+- [x] Waiter can mark order as served
 
-## 2. Order Details Display
-- [x] Admin can view detailed order information including:
-  - Which table ordered what item
-  - Who placed the order (customer/table number)
-  - Special requirements (e.g., Jain, non-Jain, no spice, extra cheese, etc.)
+## 2. KOT (Kitchen Order Ticket) Display
+- [x] KOT must show dish specifications including:
+  - Jain preference
+  - No spice
+  - Extra cheese
+  - Any other custom modifications
+- [x] Order should auto-remove from KOT display when "waiting for service" status is fulfilled
+- [x] Completed orders should move to KOT history (not deleted from database)
 
-## 3. KOT Setup Documentation
-- [x] Create kot.md file explaining:
-  - How to set up Kitchen Order Ticket (KOT) system
-  - How KOT will work
-  - Requirements needed
-  - Whether the current project satisfies KOT requirements
+## 3. Billing System
+- [x] Orders and billing must be separate flows
+- [x] Billing page displays tables with items ordered for the FIRST time only
+- [x] Example: 3 friends (Vishnu, Purvi, Vidit) order at different times
+  - Vidit orders 10 mins after Vishnu & Purvi
+  - Billing page shows Vishnu & Purvi's items (not Vidit's until he bills separately)
+  - so i mean to say that, till the table is billed, it should include all the orders from the first order placed when the table was free
+- [x] Each customer/group can be billed independently
+- [x] When billed, order is removed from billing page
+- [x] After billing: table status changes to 'free'
+- [x] Billed orders move to order history (NOT deleted from database)
+- [x] Billing page accessible only to admin
 
-## 4. Customer Bill Request Feature
-- [x] Customer can request bill from their end
-- [x] When clicked, admin receives notification that table needs billing
-- [x] Notification should indicate which table number
-
-## 5. Waiter Order Management
-- [x] Waiter can manually place orders for any table
-- [x] Waiter selects table number from available tables
-- [x] Waiter selects items from menu
-- [x] Waiter can add special instructions per item (Jain, non-Jain, etc.)
-- [x] Order is sent to kitchen and reflects in admin dashboard
+## 4. Menu Variants
+- [x] Admin can add multiple variants of a dish with different prices
+- [x] Example: Peri Peri Fries
+  - Base: ₹100
+  - With cheese dip: ₹120
+  - With mayonnaise: ₹150
+- [x] Variants display as single menu item with price options
+- [x] When customer scans QR code, menu shows all variants with prices
+- [x] KOT display shows variant name alongside dish name for kitchen clarity

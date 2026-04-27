@@ -17,6 +17,10 @@ import KOTBoard from './pages/kitchen/KOTBoard';
 import KOTHistory from './pages/kitchen/KOTHistory';
 
 import WaiterDashboard from './pages/waiter/WaiterDashboard';
+import WaiterLogin from './pages/waiter/WaiterLogin';
+
+import BillingPage from './pages/admin/BillingPage';
+import WaitersPage from './pages/admin/WaitersPage';
 
 const ProtectedRoute = ({ children, roles }) => {
   const { token, role } = useAuthStore();
@@ -43,8 +47,10 @@ function App() {
         }>
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="orders" element={<OrdersPage />} />
+          <Route path="billing" element={<BillingPage />} />
           <Route path="menu" element={<MenuManagementPage />} />
           <Route path="tables" element={<TablesPage />} />
+          <Route path="waiters" element={<WaitersPage />} />
           <Route path="analytics" element={<AnalyticsPage />} />
           <Route path="kot-history" element={<KOTHistory />} />
         </Route>
@@ -62,6 +68,7 @@ function App() {
         } />
         
         {/* Waiter Portal */}
+        <Route path="/waiter/login" element={<WaiterLogin />} />
         <Route path="/waiter" element={<WaiterDashboard />} />
         
         <Route path="/" element={<Navigate to="/menu/1" />} />

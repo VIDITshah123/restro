@@ -21,24 +21,36 @@ const MenuPage = () => {
   const [recommendations, setRecommendations] = useState([]);
 
   const [customizingItem, setCustomizingItem] = useState(null);
-  const [customOptions, setCustomOptions] = useState({ variant: 'Standard', spicy: 'Standard', noMushroom: false, text: '' });
+  const [customOptions, setCustomOptions] = useState({ selectedVariantId: null, selectedVariantName: 'Base', selectedVariantPrice: null, spicy: 'Standard', noMushroom: false, text: '' });
 
   const handleAddClick = (item) => {
     setCustomizingItem(item);
-    setCustomOptions({ variant: 'Standard', spicy: 'Standard', noMushroom: false, text: '' });
+    setCustomOptions({ 
+      selectedVariantId: null, 
+      selectedVariantName: 'Base', 
+      selectedVariantPrice: null, 
+      spicy: 'Standard', 
+      noMushroom: false, 
+      text: '' 
+    });
   };
 
   const confirmAdd = () => {
     let notes = [];
-    if (customOptions.variant !== 'Standard') notes.push(customOptions.variant);
+    if (customOptions.selectedVariantName !== 'Base') notes.push(customOptions.selectedVariantName);
     if (customOptions.spicy !== 'Standard') notes.push(customOptions.spicy);
     if (customOptions.noMushroom) notes.push('Without Mushroom');
     if (customOptions.text) notes.push(customOptions.text);
     
+    const effectivePrice = customOptions.selectedVariantPrice ?? customizingItem.price;
+    const effectiveName = customOptions.selectedVariantName !== 'Base'
+      ? `${customizingItem.name} (${customOptions.selectedVariantName})`
+      : customizingItem.name;
+
     addItem({ 
       menuItemId: customizingItem.id, 
-      name: customizingItem.name, 
-      price: customizingItem.price, 
+      name: effectiveName, 
+      price: effectivePrice, 
       is_veg: customizingItem.is_veg,
       specialNotes: notes.join(', ')
     });
@@ -199,7 +211,7 @@ const MenuPage = () => {
       {/* Customization Modal */}
       {customizingItem && (
         <div className="fixed inset-0 bg-black/50 z-[100] flex items-end sm:items-center justify-center">
-          <div className="bg-white w-full sm:w-[400px] sm:rounded-2xl rounded-t-2xl p-5 pb-safe animate-in slide-in-from-bottom-full sm:slide-in-from-bottom-0 sm:fade-in-0 duration-300">
+          <div className="bg-white w-full sm:w-[420px] sm:rounded-2xl rounded-t-2xl p-5 pb-safe">
             <div className="flex justify-between items-start mb-4">
               <div>
                 <h2 className="text-xl font-bold">{customizingItem.name}</h2>
@@ -209,18 +221,35 @@ const MenuPage = () => {
             </div>
             
             <div className="space-y-4 max-h-[60vh] overflow-y-auto pb-4">
-              {/* Variant Radio */}
-              <div>
-                <h3 className="font-semibold mb-2">Variant</h3>
-                <div className="flex gap-3">
-                  {['Standard', 'Jain', 'Half Jain'].map(opt => (
-                    <label key={opt} className="flex items-center gap-2 cursor-pointer">
-                      <input type="radio" name="variant" checked={customOptions.variant === opt} onChange={() => setCustomOptions(p => ({ ...p, variant: opt }))} className="accent-black" />
-                      <span className="text-sm">{opt}</span>
+              {/* Price Variants from DB */}
+              {customizingItem.variants && customizingItem.variants.length > 0 && (
+                <div>
+                  <h3 className="font-semibold mb-2">Choose Variant</h3>
+                  <div className="space-y-2">
+                    {/* Base price option */}
+                    <label className="flex items-center justify-between p-2 border rounded-lg cursor-pointer hover:bg-gray-50">
+                      <div className="flex items-center gap-2">
+                        <input type="radio" name="dbVariant" checked={customOptions.selectedVariantId === null}
+                          onChange={() => setCustomOptions(p => ({ ...p, selectedVariantId: null, selectedVariantName: 'Base', selectedVariantPrice: null }))}
+                          className="accent-black" />
+                        <span className="text-sm font-medium">Base</span>
+                      </div>
+                      <span className="text-sm font-bold">₹{customizingItem.price}</span>
                     </label>
-                  ))}
+                    {customizingItem.variants.map(v => (
+                      <label key={v.id} className="flex items-center justify-between p-2 border rounded-lg cursor-pointer hover:bg-gray-50">
+                        <div className="flex items-center gap-2">
+                          <input type="radio" name="dbVariant" checked={customOptions.selectedVariantId === v.id}
+                            onChange={() => setCustomOptions(p => ({ ...p, selectedVariantId: v.id, selectedVariantName: v.name, selectedVariantPrice: v.price }))}
+                            className="accent-black" />
+                          <span className="text-sm font-medium">{v.name}</span>
+                        </div>
+                        <span className="text-sm font-bold">₹{v.price}</span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Spice Level Radio */}
               <div>
@@ -235,7 +264,7 @@ const MenuPage = () => {
                 </div>
               </div>
 
-              {/* Extra Checkbox */}
+              {/* Mushroom checkbox */}
               {customizingItem.name.toLowerCase().includes('mushroom') && (
                 <div>
                   <label className="flex items-center gap-2 cursor-pointer font-semibold">
@@ -245,7 +274,7 @@ const MenuPage = () => {
                 </div>
               )}
 
-              {/* Special Instructions Text Box */}
+              {/* Special Instructions */}
               <div>
                 <h3 className="font-semibold mb-2">Special Instructions</h3>
                 <textarea 
@@ -259,7 +288,7 @@ const MenuPage = () => {
             </div>
 
             <button onClick={confirmAdd} className="w-full bg-black text-white font-bold py-3 rounded-xl mt-2">
-              Add to Cart - ₹{customizingItem.price}
+              Add to Cart — ₹{customOptions.selectedVariantPrice ?? customizingItem.price}
             </button>
           </div>
         </div>

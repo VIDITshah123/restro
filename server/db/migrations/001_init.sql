@@ -77,6 +77,29 @@ CREATE TABLE IF NOT EXISTS admins (
   created_at    TEXT    NOT NULL DEFAULT (datetime('now'))
 );
 
+-- ─────────────────────────────────────────
+-- Waiters
+-- ─────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS waiters (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  name          TEXT    NOT NULL,
+  userid        TEXT    NOT NULL UNIQUE,
+  password_hash TEXT    NOT NULL,
+  is_active     INTEGER NOT NULL DEFAULT 1,
+  created_at    TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+-- ─────────────────────────────────────────
+-- Menu Item Variants
+-- ─────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS menu_item_variants (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  menu_item_id  INTEGER NOT NULL REFERENCES menu_items(id) ON DELETE CASCADE,
+  name          TEXT    NOT NULL,  -- e.g. "With Cheese Dip"
+  price         REAL    NOT NULL,
+  created_at    TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
 -- Create Key Indexes (use IF NOT EXISTS)
 CREATE INDEX IF NOT EXISTS idx_orders_status     ON orders(status);
 CREATE INDEX IF NOT EXISTS idx_orders_table      ON orders(table_id);
@@ -85,3 +108,4 @@ CREATE INDEX IF NOT EXISTS idx_order_items_order ON order_items(order_id);
 CREATE INDEX IF NOT EXISTS idx_kot_status        ON kot(status);
 CREATE INDEX IF NOT EXISTS idx_kot_order         ON kot(order_id);
 CREATE INDEX IF NOT EXISTS idx_menu_category     ON menu_items(category, is_available);
+CREATE INDEX IF NOT EXISTS idx_variants_item     ON menu_item_variants(menu_item_id);

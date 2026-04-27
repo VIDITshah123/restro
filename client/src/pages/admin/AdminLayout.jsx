@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import { useAuthStore } from '../../store';
-import { LayoutDashboard, ListOrdered, MenuSquare, Grid, BarChart3, History, LogOut } from 'lucide-react';
+import { LayoutDashboard, ListOrdered, MenuSquare, Grid, BarChart3, History, LogOut, Receipt, Users } from 'lucide-react';
 
 const AdminLayout = () => {
   const { logout, email } = useAuthStore();
@@ -24,8 +24,10 @@ const AdminLayout = () => {
   const navItems = [
     { name: 'Dashboard', path: '/admin/dashboard', icon: <LayoutDashboard size={20} /> },
     { name: 'Orders', path: '/admin/orders', icon: <ListOrdered size={20} /> },
+    { name: 'Billing', path: '/admin/billing', icon: <Receipt size={20} /> },
     { name: 'Menu', path: '/admin/menu', icon: <MenuSquare size={20} /> },
     { name: 'Tables', path: '/admin/tables', icon: <Grid size={20} /> },
+    { name: 'Waiters', path: '/admin/waiters', icon: <Users size={20} /> },
     { name: 'Analytics', path: '/admin/analytics', icon: <BarChart3 size={20} /> },
     { name: 'KOT History', path: '/admin/kot-history', icon: <History size={20} /> },
   ];

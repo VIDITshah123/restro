@@ -6,6 +6,9 @@ const MenuManagementPage = () => {
   const [categories, setCategories] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
+  const [variantPanelItem, setVariantPanelItem] = useState(null);
+  const [variants, setVariants] = useState([]);
+  const [variantForm, setVariantForm] = useState({ name: '', price: '' });
   
   const [formData, setFormData] = useState({
     name: '',
@@ -87,6 +90,34 @@ const MenuManagementPage = () => {
     }
   };
 
+  const openVariantPanel = async (item) => {
+    setVariantPanelItem(item);
+    setVariantForm({ name: '', price: '' });
+    const res = await api.get(`/menu/${item.id}/variants`);
+    setVariants(res.data.data);
+  };
+
+  const addVariant = async (e) => {
+    e.preventDefault();
+    try {
+      await api.post(`/menu/${variantPanelItem.id}/variants`, variantForm);
+      const res = await api.get(`/menu/${variantPanelItem.id}/variants`);
+      setVariants(res.data.data);
+      setVariantForm({ name: '', price: '' });
+    } catch (err) {
+      alert('Error adding variant');
+    }
+  };
+
+  const deleteVariant = async (variantId) => {
+    try {
+      await api.delete(`/menu/${variantPanelItem.id}/variants/${variantId}`);
+      setVariants(prev => prev.filter(v => v.id !== variantId));
+    } catch (err) {
+      alert('Error deleting variant');
+    }
+  };
+
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
@@ -132,6 +163,7 @@ const MenuManagementPage = () => {
                   </button>
                 </td>
                 <td className="p-4 text-right space-x-2">
+                  <button onClick={() => openVariantPanel(item)} className="text-purple-600 hover:text-purple-800 text-sm font-medium">Variants</button>
                   <button onClick={() => handleOpenModal(item)} className="text-blue-600 hover:text-blue-800 text-sm font-medium">Edit</button>
                   <button onClick={() => handleDelete(item.id)} className="text-red-600 hover:text-red-800 text-sm font-medium">Delete</button>
                 </td>
@@ -140,6 +172,56 @@ const MenuManagementPage = () => {
           </tbody>
         </table>
       </div>
+
+      {/* Variant Management Panel */}
+      {variantPanelItem && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-lg w-full max-w-md p-6">
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h2 className="text-xl font-bold">Variants: {variantPanelItem.name}</h2>
+                <p className="text-sm text-gray-500">Base price: ₹{variantPanelItem.price}</p>
+              </div>
+              <button onClick={() => setVariantPanelItem(null)} className="text-gray-400 p-1">✕</button>
+            </div>
+
+            {/* Existing variants */}
+            <div className="mb-4 space-y-2">
+              {variants.length === 0 && <p className="text-gray-400 text-sm">No variants yet. Add one below.</p>}
+              {variants.map(v => (
+                <div key={v.id} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
+                  <span className="font-medium text-sm">{v.name}</span>
+                  <div className="flex items-center gap-3">
+                    <span className="font-bold text-sm">₹{v.price}</span>
+                    <button onClick={() => deleteVariant(v.id)} className="text-red-500 text-xs font-medium">Remove</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Add variant form */}
+            <form onSubmit={addVariant} className="border-t pt-4 flex gap-2">
+              <input
+                required
+                type="text"
+                placeholder="Variant name (e.g. With Cheese Dip)"
+                value={variantForm.name}
+                onChange={e => setVariantForm({ ...variantForm, name: e.target.value })}
+                className="flex-1 border rounded-lg p-2 text-sm"
+              />
+              <input
+                required
+                type="number"
+                placeholder="₹"
+                value={variantForm.price}
+                onChange={e => setVariantForm({ ...variantForm, price: e.target.value })}
+                className="w-20 border rounded-lg p-2 text-sm"
+              />
+              <button type="submit" className="bg-black text-white px-3 py-2 rounded-lg text-sm font-bold">Add</button>
+            </form>
+          </div>
+        </div>
+      )}
 
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">

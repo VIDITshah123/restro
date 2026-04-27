@@ -123,11 +123,79 @@ const requestBill = (req, res) => {
   res.json({ success: true });
 };
 
+// ── Billing: Get all un-billed orders for a table ─────────────────────────────
+// Returns all orders placed since the table last became occupied (status != 'billed')
+const getBillingForTable = (req, res) => {
+  const { tableId } = req.params;
+
+  // Find the time of the last billing event for this table
+  const lastBill = db.prepare(`
+    SELECT MAX(updated_at) as last_billed
+    FROM orders
+    WHERE table_id = ? AND status = 'billed'
+  `).get(tableId);
+
+  let orders;
+  if (lastBill && lastBill.last_billed) {
+    orders = db.prepare(`
+      SELECT o.*, t.table_number
+      FROM orders o
+      JOIN tables t ON o.table_id = t.id
+      WHERE o.table_id = ? AND o.status != 'billed' AND o.placed_at > ?
+      ORDER BY o.placed_at ASC
+    `).all(tableId, lastBill.last_billed);
+  } else {
+    orders = db.prepare(`
+      SELECT o.*, t.table_number
+      FROM orders o
+      JOIN tables t ON o.table_id = t.id
+      WHERE o.table_id = ? AND o.status != 'billed'
+      ORDER BY o.placed_at ASC
+    `).all(tableId);
+  }
+
+  // Attach items to each order
+  for (const order of orders) {
+    order.items = db.prepare(`
+      SELECT oi.*, m.name, m.price, m.is_veg 
+      FROM order_items oi 
+      JOIN menu_items m ON oi.menu_item_id = m.id 
+      WHERE oi.order_id = ?
+    `).all(order.id);
+  }
+
+  const grandTotal = orders.reduce((sum, o) => sum + o.total_amount, 0);
+  res.json({ success: true, data: { orders, grandTotal } });
+};
+
+// ── Billing: Bill the entire table (all current orders) ───────────────────────
+const generateTableBill = (req, res) => {
+  const { tableId } = req.params;
+
+  try {
+    db.transaction(() => {
+      db.prepare("UPDATE orders SET status = 'billed', updated_at = datetime('now') WHERE table_id = ? AND status != 'billed'").run(tableId);
+      db.prepare('UPDATE tables SET is_occupied = 0 WHERE id = ?').run(tableId);
+    })();
+
+    if (req.io) {
+      req.io.of('/admin').emit('table:statusChanged', { tableId: parseInt(tableId), isOccupied: 0 });
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   createOrder,
   getOrders,
   getOrderById,
   updateOrderStatus,
   generateBill,
-  requestBill
+  requestBill,
+  getBillingForTable,
+  generateTableBill,
 };
+

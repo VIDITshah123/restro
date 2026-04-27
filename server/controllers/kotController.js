@@ -60,6 +60,18 @@ const updateKotStatus = (req, res) => {
     const payload = { kotId: parseInt(id), newStatus: status, orderId: kot.order_id, tableId: kot.table_id };
     req.io.of('/customer').to(`order:${kot.order_id}`).emit('kot:statusUpdate', payload);
     req.io.of('/admin').to('admin:global').emit('kot:statusUpdate', payload);
+    req.io.of('/waiter').to('waiter:global').emit('kot:statusUpdate', payload);
+    
+    if (status === 'ready') {
+      // Notify waiters that an order is ready to be served
+      const tableInfo = db.prepare('SELECT table_number FROM tables WHERE id = ?').get(kot.table_id);
+      req.io.of('/waiter').to('waiter:global').emit('order:ready', { 
+        kotId: parseInt(id), 
+        orderId: kot.order_id, 
+        tableId: kot.table_id,
+        tableNumber: tableInfo ? tableInfo.table_number : `Table ${kot.table_id}`
+      });
+    }
     
     if (status === 'served') {
       req.io.of('/admin').emit('table:statusChanged', { tableId: kot.table_id, isOccupied: 0 });

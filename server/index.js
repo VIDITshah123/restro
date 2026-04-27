@@ -13,6 +13,8 @@ const tableController = require('./controllers/tableController');
 const orderController = require('./controllers/orderController');
 const kotController = require('./controllers/kotController');
 const analyticsController = require('./controllers/analyticsController');
+const waiterController = require('./controllers/waiterController');
+const variantController = require('./controllers/variantController');
 
 const app = express();
 const server = http.createServer(app);
@@ -44,6 +46,9 @@ io.of('/kitchen').on('connection', (socket) => {
 io.of('/admin').on('connection', (socket) => {
   socket.join('admin:global');
 });
+io.of('/waiter').on('connection', (socket) => {
+  socket.join('waiter:global');
+});
 
 // --- REST API Routes --- //
 
@@ -52,12 +57,18 @@ app.post('/api/auth/login', authController.login);
 app.post('/api/auth/logout', authenticate, authController.logout);
 
 // Menu
-app.get('/api/menu', menuController.getMenu);
+app.get('/api/menu', variantController.getMenuWithVariants);
 app.get('/api/menu/categories', menuController.getCategories);
 app.post('/api/menu', authenticate, authorize('admin'), menuController.createMenuItem);
 app.put('/api/menu/:id', authenticate, authorize('admin'), menuController.updateMenuItem);
 app.delete('/api/menu/:id', authenticate, authorize('admin'), menuController.deleteMenuItem);
 app.patch('/api/menu/:id/availability', authenticate, authorize('admin'), menuController.toggleAvailability);
+
+// Menu Variants
+app.get('/api/menu/:id/variants', variantController.getVariants);
+app.post('/api/menu/:id/variants', authenticate, authorize('admin'), variantController.createVariant);
+app.put('/api/menu/:id/variants/:variantId', authenticate, authorize('admin'), variantController.updateVariant);
+app.delete('/api/menu/:id/variants/:variantId', authenticate, authorize('admin'), variantController.deleteVariant);
 
 // Tables
 app.get('/api/tables', tableController.getTables);
@@ -82,6 +93,17 @@ app.patch('/api/kot/:id/status', authenticate, kotController.updateKotStatus);
 app.get('/api/analytics/today', authenticate, authorize('admin'), analyticsController.getTodayAnalytics);
 app.get('/api/analytics/revenue', authenticate, authorize('admin'), analyticsController.getRevenue);
 app.get('/api/analytics/top-dishes', authenticate, authorize('admin'), analyticsController.getTopDishes);
+
+// Waiters (Admin CRUD)
+app.post('/api/auth/waiter-login', waiterController.waiterLogin);
+app.get('/api/waiters', authenticate, authorize('admin'), waiterController.getWaiters);
+app.post('/api/waiters', authenticate, authorize('admin'), waiterController.createWaiter);
+app.put('/api/waiters/:id', authenticate, authorize('admin'), waiterController.updateWaiter);
+app.delete('/api/waiters/:id', authenticate, authorize('admin'), waiterController.deleteWaiter);
+
+// Billing — get all unbilled orders for a table
+app.get('/api/billing/:tableId', authenticate, authorize(['admin', 'manager']), orderController.getBillingForTable);
+app.post('/api/billing/:tableId/generate', authenticate, authorize(['admin', 'manager']), orderController.generateTableBill);
 
 // --- AI Service Proxy --- //
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
