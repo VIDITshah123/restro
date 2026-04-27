@@ -90,9 +90,44 @@ const updateOrderStatus = (req, res) => {
   res.json({ success: true });
 };
 
+const generateBill = (req, res) => {
+  const { id } = req.params;
+  
+  try {
+    const order = db.prepare('SELECT table_id FROM orders WHERE id = ?').get(id);
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+    
+    db.transaction(() => {
+      db.prepare("UPDATE orders SET status = 'billed', updated_at = datetime('now') WHERE id = ?").run(id);
+      db.prepare('UPDATE tables SET is_occupied = 0 WHERE id = ?').run(order.table_id);
+    })();
+    
+    if (req.io) {
+      req.io.of('/admin').emit('table:statusChanged', { tableId: order.table_id, isOccupied: 0 });
+    }
+    
+    res.json({ success: true, message: 'Bill generated successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+const requestBill = (req, res) => {
+  const { id } = req.params;
+  const order = db.prepare('SELECT o.table_id, t.table_number FROM orders o JOIN tables t ON o.table_id = t.id WHERE o.id = ?').get(id);
+  if (!order) return res.status(404).json({ success: false });
+  
+  if (req.io) {
+    req.io.of('/admin').emit('notification:bill_request', { tableNumber: order.table_number, orderId: id });
+  }
+  res.json({ success: true });
+};
+
 module.exports = {
   createOrder,
   getOrders,
   getOrderById,
-  updateOrderStatus
+  updateOrderStatus,
+  generateBill,
+  requestBill
 };

@@ -18,6 +18,7 @@ const OrderStatusPage = () => {
   useOrderStatusSocket(orderId);
   const { currentOrder } = useOrderStore();
   const [orderDetails, setOrderDetails] = useState(null);
+  const [billRequested, setBillRequested] = useState(false);
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -36,6 +37,16 @@ const OrderStatusPage = () => {
   // The actual live status comes from Zustand, or fallback to fetched details
   const activeStatus = currentOrder?.status || orderDetails.kot_status || orderDetails.status;
   const activeIndex = STATUS_STEPS.findIndex(s => s.key === activeStatus);
+
+  const handleRequestBill = async () => {
+    try {
+      await api.post(`/orders/${orderId}/request-bill`);
+      setBillRequested(true);
+      alert('Bill requested successfully! Admin will bring it to you shortly.');
+    } catch (error) {
+      alert('Failed to request bill.');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center py-10 px-4">
@@ -75,7 +86,7 @@ const OrderStatusPage = () => {
         </div>
       </div>
 
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-sm border p-6">
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-sm border p-6 mb-16">
         <h3 className="font-bold border-b pb-3 mb-3">Order Summary</h3>
         <div className="space-y-3">
           {orderDetails.items.map(item => (
@@ -89,6 +100,21 @@ const OrderStatusPage = () => {
           <span>Total</span>
           <span>₹{orderDetails.total_amount}</span>
         </div>
+      </div>
+
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t">
+        <button
+          onClick={handleRequestBill}
+          disabled={billRequested || activeStatus !== 'served'}
+          className={`w-full font-bold py-4 rounded-xl text-lg flex items-center justify-center gap-2 transition-colors
+            ${billRequested 
+              ? 'bg-green-100 text-green-700' 
+              : activeStatus !== 'served'
+                ? 'bg-gray-200 text-gray-500'
+                : 'bg-black text-white hover:bg-gray-800'}`}
+        >
+          {billRequested ? 'Bill Requested ✅' : 'Request Bill'}
+        </button>
       </div>
     </div>
   );

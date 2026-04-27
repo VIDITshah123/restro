@@ -60,7 +60,7 @@ app.delete('/api/menu/:id', authenticate, authorize('admin'), menuController.del
 app.patch('/api/menu/:id/availability', authenticate, authorize('admin'), menuController.toggleAvailability);
 
 // Tables
-app.get('/api/tables', authenticate, authorize(['admin', 'manager']), tableController.getTables);
+app.get('/api/tables', tableController.getTables);
 app.get('/api/tables/:tableId', tableController.getTableById);
 app.post('/api/tables', authenticate, authorize('admin'), tableController.createTable);
 app.delete('/api/tables/:id', authenticate, authorize('admin'), tableController.deleteTable);
@@ -70,6 +70,8 @@ app.post('/api/orders', orderController.createOrder);
 app.get('/api/orders', authenticate, authorize(['admin', 'manager']), orderController.getOrders);
 app.get('/api/orders/:id', orderController.getOrderById);
 app.patch('/api/orders/:id/status', authenticate, authorize(['admin', 'manager']), orderController.updateOrderStatus);
+app.post('/api/orders/:id/bill', authenticate, authorize(['admin', 'manager']), orderController.generateBill);
+app.post('/api/orders/:id/request-bill', orderController.requestBill);
 
 // KOT
 app.get('/api/kot', authenticate, kotController.getKot);

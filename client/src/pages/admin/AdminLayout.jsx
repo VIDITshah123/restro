@@ -1,4 +1,6 @@
+import { useEffect } from 'react';
 import { Outlet, Link, useNavigate } from 'react-router-dom';
+import { io } from 'socket.io-client';
 import { useAuthStore } from '../../store';
 import { LayoutDashboard, ListOrdered, MenuSquare, Grid, BarChart3, History, LogOut } from 'lucide-react';
 
@@ -10,6 +12,14 @@ const AdminLayout = () => {
     logout();
     navigate('/admin/login');
   };
+
+  useEffect(() => {
+    const socket = io('http://localhost:3000/admin');
+    socket.on('notification:bill_request', (data) => {
+      alert(`🛎️ BILL REQUEST: Table ${data.tableNumber} is ready to pay for Order #${data.orderId}!`);
+    });
+    return () => socket.disconnect();
+  }, []);
 
   const navItems = [
     { name: 'Dashboard', path: '/admin/dashboard', icon: <LayoutDashboard size={20} /> },
