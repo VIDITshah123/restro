@@ -36,9 +36,33 @@ const createTable = async (req, res) => {
 
 const deleteTable = (req, res) => {
   const { id } = req.params;
-  db.prepare('DELETE FROM tables WHERE id = ?').run(id);
-  res.json({ success: true });
+
+  try {
+    // Check if any orders reference this table
+    const linkedOrders = db.prepare('SELECT COUNT(*) as count FROM orders WHERE table_id = ?').get(id);
+    if (linkedOrders.count > 0) {
+      return res.status(409).json({
+        success: false,
+        message: `Cannot delete — this table has ${linkedOrders.count} order(s) in history. Delete its orders first or keep the table.`
+      });
+    }
+
+    // Check if any KOTs reference this table
+    const linkedKOTs = db.prepare('SELECT COUNT(*) as count FROM kot WHERE table_id = ?').get(id);
+    if (linkedKOTs.count > 0) {
+      return res.status(409).json({
+        success: false,
+        message: `Cannot delete — this table has KOT records linked to it.`
+      });
+    }
+
+    db.prepare('DELETE FROM tables WHERE id = ?').run(id);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
 };
+
 
 module.exports = {
   getTables,

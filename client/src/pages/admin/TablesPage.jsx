@@ -55,9 +55,13 @@ const TablesPage = () => {
 
             <button 
               onClick={async () => {
-                if (confirm('Are you sure you want to delete this table?')) {
+                if (!confirm(`Delete ${table.table_number}? This cannot be undone.`)) return;
+                try {
                   await api.delete(`/tables/${table.id}`);
                   fetchTables();
+                } catch (err) {
+                  const msg = err.response?.data?.message || 'Error deleting table';
+                  alert(msg);
                 }
               }}
               className="text-red-500 font-medium text-sm hover:underline"
