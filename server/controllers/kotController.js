@@ -51,10 +51,8 @@ const updateKotStatus = (req, res) => {
   
   const kot = db.prepare('SELECT order_id, table_id FROM kot WHERE id = ?').get(id);
   
-  if (status === 'served') {
-    db.prepare("UPDATE orders SET status = ?, updated_at = datetime('now') WHERE id = ?").run('served', kot.order_id);
-    db.prepare('UPDATE tables SET is_occupied = 0 WHERE id = ?').run(kot.table_id);
-  }
+  // KOT only tracks kitchen status — it never touches orders or tables.
+  // Billing is completely independent and handles table/order state.
 
   if (req.io) {
     const payload = { kotId: parseInt(id), newStatus: status, orderId: kot.order_id, tableId: kot.table_id };
@@ -72,10 +70,7 @@ const updateKotStatus = (req, res) => {
         tableNumber: tableInfo ? tableInfo.table_number : `Table ${kot.table_id}`
       });
     }
-    
-    if (status === 'served') {
-      req.io.of('/admin').emit('table:statusChanged', { tableId: kot.table_id, isOccupied: 0 });
-    }
+    // Table freed only via Billing page (generateTableBill)
   }
 
   res.json({ success: true });

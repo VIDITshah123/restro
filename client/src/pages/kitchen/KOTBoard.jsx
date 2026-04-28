@@ -47,11 +47,16 @@ const KOTCard = ({ kot, onStatusUpdate }) => {
       <div className="flex justify-between items-start border-b pb-2 mb-2">
         <div>
           <h2 className="text-xl font-bold">{kot.kot_number}</h2>
-          <p className="text-gray-600 font-semibold">{kot.table_number}</p>
+          {/* Fix: socket emits tableNumber (camelCase), DB fetch returns table_number */}
+          <p className="text-gray-600 font-semibold">{kot.table_number || kot.tableNumber || '—'}</p>
         </div>
         <div className="text-right">
           <p className="font-mono text-sm">{elapsed} min ago</p>
-          <span className="uppercase text-xs font-bold tracking-wider text-gray-500">{kot.status}</span>
+          <span className={`uppercase text-xs font-bold tracking-wider ${
+            kot.status === 'ready' ? 'text-green-600' :
+            kot.status === 'preparing' ? 'text-orange-500' :
+            kot.status === 'accepted' ? 'text-blue-500' : 'text-gray-500'
+          }`}>{kot.status}</span>
         </div>
       </div>
 
@@ -61,9 +66,10 @@ const KOTCard = ({ kot, onStatusUpdate }) => {
             <span className="font-bold">{item.quantity}x</span>
             <div>
               <p className="font-medium">{item.name}</p>
-              {item.special_notes && (
+              {/* Show special notes only if non-empty */}
+              {item.special_notes && item.special_notes.trim() !== '' && (
                 <span className="inline-block mt-1 bg-orange-100 text-orange-800 text-xs px-2 py-0.5 rounded font-bold">
-                  {item.special_notes}
+                  📝 {item.special_notes}
                 </span>
               )}
             </div>
@@ -73,16 +79,21 @@ const KOTCard = ({ kot, onStatusUpdate }) => {
 
       <div className="flex gap-2 mt-auto">
         {kot.status === 'received' && (
-          <button onClick={() => handleUpdate('accepted')} className="flex-1 bg-blue-500 text-white font-bold py-2 rounded">Accept</button>
+          <button onClick={() => handleUpdate('accepted')} className="flex-1 bg-blue-500 text-white font-bold py-2 rounded">✓ Accept</button>
         )}
         {kot.status === 'accepted' && (
-          <button onClick={() => handleUpdate('preparing')} className="flex-1 bg-orange-500 text-white font-bold py-2 rounded">Preparing</button>
+          <button onClick={() => handleUpdate('preparing')} className="flex-1 bg-orange-500 text-white font-bold py-2 rounded">🍳 Preparing</button>
         )}
         {kot.status === 'preparing' && (
-          <button onClick={() => handleUpdate('ready')} className="flex-1 bg-green-500 text-white font-bold py-2 rounded">Ready</button>
+          <button onClick={() => handleUpdate('ready')} className="flex-1 bg-green-500 text-white font-bold py-2 rounded">🔔 Mark Ready</button>
         )}
         {kot.status === 'ready' && (
-          <button disabled className="flex-1 bg-gray-200 text-gray-500 font-bold py-2 rounded">Waiting for Service</button>
+          <button
+            onClick={() => handleUpdate('served')}
+            className="flex-1 bg-purple-600 text-white font-bold py-2 rounded hover:bg-purple-700 transition-colors"
+          >
+            ✅ Mark Served
+          </button>
         )}
       </div>
     </motion.div>
