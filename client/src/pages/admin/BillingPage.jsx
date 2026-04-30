@@ -53,6 +53,18 @@ const BillingPage = () => {
       addNotification(`Table ${data.tableNumber || data.tableId} requested bill!`);
     });
 
+    socket.on('table:statusChanged', (data) => {
+      setTables(prev => {
+        const existing = prev.find(t => t.id === data.tableId);
+        if (existing) {
+          return prev.map(t => t.id === data.tableId ? { ...t, is_occupied: data.isOccupied } : t);
+        } else {
+          fetchTables();
+          return prev;
+        }
+      });
+    });
+
     return () => socket.disconnect();
   }, []);
 
