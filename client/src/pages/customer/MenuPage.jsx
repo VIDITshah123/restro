@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSessionStore, useCartStore } from '../../store';
 import api from '../../api';
-import { ShoppingCart, Receipt, X, CheckCircle } from 'lucide-react';
+import { ShoppingCart, Receipt, X, CheckCircle, Plus, Minus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const MenuPage = () => {
@@ -22,6 +22,7 @@ const MenuPage = () => {
 
   const [customizingItem, setCustomizingItem] = useState(null);
   const [customOptions, setCustomOptions] = useState({ selectedVariantId: null, selectedVariantName: 'Base', selectedVariantPrice: null, vegType: 'Regular', noMushroom: false, text: '' });
+  const [customQty, setCustomQty] = useState(1);
   const [showBillPopup, setShowBillPopup] = useState(false);
   const [billRequested, setBillRequested] = useState(false);
   const [billAmount, setBillAmount] = useState(0);
@@ -36,6 +37,7 @@ const MenuPage = () => {
       noMushroom: false, 
       text: '' 
     });
+    setCustomQty(1);
   };
 
   const confirmAdd = () => {
@@ -55,9 +57,11 @@ const MenuPage = () => {
       name: effectiveName, 
       price: effectivePrice, 
       is_veg: customizingItem.is_veg,
-      specialNotes: notes.join(', ')
+      specialNotes: notes.join(', '),
+      quantity: customQty
     });
     setCustomizingItem(null);
+    setCustomQty(1);
   };
 
   const handleBillRequest = async () => {
@@ -258,12 +262,32 @@ const MenuPage = () => {
             </div>
             
             <div className="space-y-4 max-h-[60vh] overflow-y-auto pb-4">
+              {/* Quantity Selector */}
+              <div>
+                <h3 className="font-semibold mb-2">Quantity</h3>
+                <div className="flex items-center gap-3 bg-gray-50 rounded-lg px-4 py-2 border w-fit">
+                  <button 
+                    onClick={() => setCustomQty(q => Math.max(1, q - 1))} 
+                    className="p-1 hover:bg-gray-200 rounded transition-colors"
+                    disabled={customQty <= 1}
+                  >
+                    <Minus size={20} className={customQty <= 1 ? 'text-gray-300' : 'text-gray-700'} />
+                  </button>
+                  <span className="font-bold text-lg w-8 text-center">{customQty}</span>
+                  <button 
+                    onClick={() => setCustomQty(q => q + 1)} 
+                    className="p-1 hover:bg-gray-200 rounded transition-colors"
+                  >
+                    <Plus size={20} className="text-gray-700" />
+                  </button>
+                </div>
+              </div>
+
               {/* Price Variants from DB */}
               {customizingItem.variants && customizingItem.variants.length > 0 && (
                 <div>
                   <h3 className="font-semibold mb-2">Choose Variant</h3>
                   <div className="space-y-2">
-                    {/* Base price option */}
                     <label className="flex items-center justify-between p-2 border rounded-lg cursor-pointer hover:bg-gray-50">
                       <div className="flex items-center gap-2">
                         <input type="radio" name="dbVariant" checked={customOptions.selectedVariantId === null}
@@ -281,7 +305,7 @@ const MenuPage = () => {
                             className="accent-black" />
                           <span className="text-sm font-medium">{v.name}</span>
                         </div>
-                        <span className="text-sm font-bold">₹{v.price}</span>
+                        {v.price > 0 && <span className="text-sm font-bold">₹{v.price}</span>}
                       </label>
                     ))}
                   </div>
@@ -327,7 +351,7 @@ const MenuPage = () => {
             </div>
 
             <button onClick={confirmAdd} className="w-full bg-black text-white font-bold py-3 rounded-xl mt-2">
-              Add to Cart — ₹{customOptions.selectedVariantPrice ?? customizingItem.price}
+              Add to Cart — ₹{((customOptions.selectedVariantPrice ?? customizingItem.price) * customQty).toFixed(0)}
             </button>
           </div>
         </div>

@@ -2,13 +2,42 @@ import React, { useState, useEffect } from 'react';
 import { io } from 'socket.io-client';
 import api from '../../api';
 import { toIST } from '../../lib/utils';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Bell, X } from 'lucide-react';
 
 const BillingPage = () => {
   const [tables, setTables] = useState([]);
   const [selectedTable, setSelectedTable] = useState(null);
   const [billing, setBilling] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [billRequestedTables, setBillRequestedTables] = useState(new Set());
+  const [notifications, setNotifications] = useState([]);
+  
+  const loadBillRequests = () => {
+    try {
+      const stored = localStorage.getItem('billRequestedTables');
+      return stored ? new Set(JSON.parse(stored)) : new Set();
+    } catch {
+      return new Set();
+    }
+  };
+  
+  const [billRequestedTables, setBillRequestedTables] = useState(loadBillRequests);
+
+  const persistBillRequests = (tableSet) => {
+    localStorage.setItem('billRequestedTables', JSON.stringify([...tableSet]));
+  };
+
+  const addNotification = (message) => {
+    const id = Date.now();
+    setNotifications(prev => [...prev, { id, message }]);
+    setTimeout(() => {
+      setNotifications(prev => prev.filter(n => n.id !== id));
+    }, 4000);
+  };
+
+  const removeNotification = (id) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+  };
 
   useEffect(() => {
     fetchTables();
@@ -18,8 +47,10 @@ const BillingPage = () => {
       setBillRequestedTables(prev => {
         const next = new Set(prev);
         next.add(data.tableId || data.tableNumber);
+        persistBillRequests(next);
         return next;
       });
+      addNotification(`Table ${data.tableNumber || data.tableId} requested bill!`);
     });
 
     return () => socket.disconnect();
@@ -28,7 +59,18 @@ const BillingPage = () => {
   const fetchTables = async () => {
     try {
       const res = await api.get('/tables');
-      setTables(res.data.data);
+      const fetchedTables = res.data.data;
+      setTables(fetchedTables);
+      
+      setBillRequestedTables(prev => {
+        const occupiedIds = new Set(fetchedTables.filter(t => t.is_occupied).map(t => t.id));
+        const occupiedNames = new Set(fetchedTables.filter(t => t.is_occupied).map(t => t.table_number));
+        const next = new Set([...prev].filter(id => occupiedIds.has(id) || occupiedNames.has(id)));
+        if (next.size !== prev.size) {
+          persistBillRequests(next);
+        }
+        return next;
+      });
     } catch (err) {
       console.error(err);
     }
@@ -55,6 +97,7 @@ const BillingPage = () => {
       setBillRequestedTables(prev => {
         const next = new Set(prev);
         next.delete(selectedTable);
+        persistBillRequests(next);
         return next;
       });
       setBilling(null);
@@ -183,6 +226,36 @@ const BillingPage = () => {
             )}
           </div>
         )}
+      </div>
+
+      {/* Toast Notifications */}
+      <div className="fixed top-4 right-4 z-[9999] space-y-2 max-w-sm w-full pointer-events-none">
+        <AnimatePresence>
+          {notifications.map(note => (
+            <motion.div
+              key={note.id}
+              initial={{ opacity: 0, x: 100, scale: 0.9 }}
+              animate={{ opacity: 1, x: 0, scale: 1 }}
+              exit={{ opacity: 0, x: 100, scale: 0.9 }}
+              transition={{ duration: 0.3 }}
+              className="bg-white border-2 border-yellow-400 shadow-lg rounded-xl p-4 pointer-events-auto flex items-start gap-3"
+            >
+              <div className="bg-yellow-100 p-2 rounded-full shrink-0">
+                <Bell size={20} className="text-yellow-600" />
+              </div>
+              <div className="flex-1">
+                <p className="font-bold text-sm text-gray-800">Bill Request</p>
+                <p className="text-gray-600 text-sm">{note.message}</p>
+              </div>
+              <button 
+                onClick={() => removeNotification(note.id)}
+                className="text-gray-400 hover:text-gray-600 shrink-0 p-1"
+              >
+                <X size={16} />
+              </button>
+            </motion.div>
+          ))}
+        </AnimatePresence>
       </div>
     </div>
   );
