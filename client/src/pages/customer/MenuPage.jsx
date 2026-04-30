@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSessionStore, useCartStore } from '../../store';
 import api from '../../api';
-import { ShoppingCart, Receipt, X, CheckCircle, Plus, Minus } from 'lucide-react';
+import { ShoppingCart, Receipt, X, CheckCircle, Plus, Minus, CreditCard, FileText } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const MenuPage = () => {
@@ -26,6 +26,7 @@ const MenuPage = () => {
   const [showBillPopup, setShowBillPopup] = useState(false);
   const [billRequested, setBillRequested] = useState(false);
   const [billAmount, setBillAmount] = useState(0);
+  const [billOrders, setBillOrders] = useState([]);
 
   const handleAddClick = (item) => {
     setCustomizingItem(item);
@@ -68,11 +69,13 @@ const MenuPage = () => {
     try {
       const res = await api.get(`/billing/${tableId}`);
       setBillAmount(res.data.data.grandTotal || 0);
+      setBillOrders(res.data.data.orders || []);
       setShowBillPopup(true);
       setBillRequested(false);
     } catch (err) {
       console.error(err);
       setBillAmount(0);
+      setBillOrders([]);
       setShowBillPopup(true);
     }
   };
@@ -357,57 +360,105 @@ const MenuPage = () => {
         </div>
       )}
 
-      {/* Bill Request Popup */}
+      {/* Bill Popup */}
       <AnimatePresence>
         {showBillPopup && (
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 z-[110] flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/50 z-[110] flex items-end sm:items-center justify-center"
             onClick={() => !billRequested && setShowBillPopup(false)}
           >
             <motion.div 
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6"
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 25 }}
+              className="bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl max-h-[85vh] overflow-y-auto"
               onClick={e => e.stopPropagation()}
             >
               {billRequested ? (
-                <div className="text-center py-4">
-                  <CheckCircle size={48} className="text-green-500 mx-auto mb-3" />
-                  <h3 className="text-xl font-bold text-green-700">Request Sent Successfully!</h3>
+                <div className="p-8 text-center">
+                  <CheckCircle size={56} className="text-green-500 mx-auto mb-4" />
+                  <h3 className="text-xl font-bold text-green-700">Bill Requested!</h3>
                   <p className="text-gray-500 mt-2">Your bill request has been sent to the admin.</p>
+                  <p className="text-sm text-gray-400 mt-1">A waiter will bring the bill shortly.</p>
                 </div>
               ) : (
                 <>
-                  <div className="flex justify-between items-start mb-4">
+                  <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center z-10">
                     <div>
-                      <h2 className="text-xl font-bold">Request Bill</h2>
+                      <h2 className="text-xl font-bold">Your Bill</h2>
                       <p className="text-gray-500 text-sm">{tableNumber}</p>
                     </div>
-                    <button onClick={() => setShowBillPopup(false)} className="text-gray-400 p-1">
+                    <button onClick={() => setShowBillPopup(false)} className="text-gray-400 p-1 hover:text-gray-600">
                       <X size={20} />
                     </button>
                   </div>
                   
-                  {billAmount > 0 ? (
-                    <div className="bg-gray-50 rounded-xl p-4 mb-4">
-                      <p className="text-sm text-gray-500 mb-1">Current Bill Amount</p>
-                      <p className="text-3xl font-black">₹{billAmount}</p>
+                  {billOrders.length === 0 ? (
+                    <div className="p-8 text-center">
+                      <p className="text-gray-400 text-lg font-medium">No orders placed yet</p>
                     </div>
                   ) : (
-                    <p className="text-gray-400 text-center py-4 mb-4">No orders placed yet</p>
+                    <>
+                      <div className="px-6 py-4 space-y-4">
+                        {billOrders.map(order => (
+                          <div key={order.id} className="border rounded-xl overflow-hidden">
+                            <div className="bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-600">
+                              Order #{order.id} — {order.customer_name || 'Guest'}
+                            </div>
+                            <div className="divide-y">
+                              {order.items.map(item => (
+                                <div key={item.id} className="px-4 py-3 flex justify-between items-start">
+                                  <div className="flex-1">
+                                    <p className="text-sm font-medium">
+                                      {item.quantity}x {item.name}
+                                    </p>
+                                    {item.special_notes && (
+                                      <p className="text-xs text-orange-600 font-semibold mt-0.5">
+                                        📝 {item.special_notes}
+                                      </p>
+                                    )}
+                                  </div>
+                                  <span className="text-sm font-medium text-gray-700 ml-4">₹{item.price * item.quantity}</span>
+                                </div>
+                              ))}
+                            </div>
+                            <div className="px-4 py-2 bg-gray-50 flex justify-between text-sm font-bold border-t">
+                              <span>Subtotal</span>
+                              <span>₹{order.total_amount}</span>
+                            </div>
+                          </div>
+                        ))}
+
+                        <div className="border-2 border-black rounded-xl px-6 py-4 flex justify-between items-center">
+                          <span className="text-lg font-bold">Grand Total</span>
+                          <span className="text-3xl font-black">₹{billAmount}</span>
+                        </div>
+                      </div>
+
+                      <div className="sticky bottom-0 bg-white border-t px-6 py-4 space-y-3 pb-safe">
+                        <button
+                          onClick={() => {
+                            alert('Online payment coming soon!');
+                          }}
+                          className="w-full bg-green-600 text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2 hover:bg-green-700 transition-colors"
+                        >
+                          <CreditCard size={20} />
+                          Pay Online
+                        </button>
+                        <button
+                          onClick={submitBillRequest}
+                          className="w-full bg-black text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2"
+                        >
+                          <FileText size={20} />
+                          Request Bill
+                        </button>
+                      </div>
+                    </>
                   )}
-                  
-                  <button
-                    onClick={submitBillRequest}
-                    disabled={billAmount === 0}
-                    className="w-full bg-black text-white font-bold py-3 rounded-xl disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    Request Bill
-                  </button>
                 </>
               )}
             </motion.div>
