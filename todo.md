@@ -1,40 +1,7 @@
-# Todo - Restro Management System
-
-## 1. Waiter Management
-- [x] Admin can create waiter accounts (userid & password)
-- [x] Admin can perform CRUD operations on waiter credentials
-- [x] Waiter can login with their credentials
-- [x] Waiter receives notification when their assigned order is ready for service
-- [x] Waiter can mark order as served
-
-## 2. KOT (Kitchen Order Ticket) Display
-- [x] KOT must show dish specifications including:
-  - Jain preference
-  - No spice
-  - Extra cheese
-  - Any other custom modifications
-- [x] Order should auto-remove from KOT display when "waiting for service" status is fulfilled
-- [x] Completed orders should move to KOT history (not deleted from database)
-
-## 3. Billing System
-- [x] Orders and billing must be separate flows
-- [x] Billing page displays tables with items ordered for the FIRST time only
-- [x] Example: 3 friends (Vishnu, Purvi, Vidit) order at different times
-  - Vidit orders 10 mins after Vishnu & Purvi
-  - Billing page shows Vishnu & Purvi's items (not Vidit's until he bills separately)
-  - so i mean to say that, till the table is billed, it should include all the orders from the first order placed when the table was free
-- [x] Each customer/group can be billed independently
-- [x] When billed, order is removed from billing page
-- [x] After billing: table status changes to 'free'
-- [x] Billed orders move to order history (NOT deleted from database)
-- [x] Billing page accessible only to admin
-
-## 4. Menu Variants
-- [x] Admin can add multiple variants of a dish with different prices
-- [x] Example: Peri Peri Fries
-  - Base: ₹100
-  - With cheese dip: ₹120
-  - With mayonnaise: ₹150
-- [x] Variants display as single menu item with price options
-- [x] When customer scans QR code, menu shows all variants with prices
-- [x] KOT display shows variant name alongside dish name for kitchen clarity
+- [ ] in kot & admin pannels, if i choose a particular choice like garlic nan with less spice, its showing garlic nan only not with the modifier, also if i add two choices for any dish, like less spice and jain, its showing only one choice in the KOT  
+- [ ] while selecting & adding items in cart, when i modify it there, it is not applied but when i go in cart section & give special instruction it is applied, i want the special instruction to be applied at the time of selecting or adding it in cart only, not in cart section
+- [ ]  in billing page, if a customer requestes to get the bill, the table should show some change for that table, like colour change to highlight it or something like that....before, a notification used to pop up but now it is not happening
+- [ ]  the option for request for bill should be visible to customer in menu page only like a small icon near to the cart icon, when clicked should show a pop up saying "request for bill" or "bill please", when clicked it should show"request sent successfully" and then the pop up should disappear also they can see how much is the bill amount in all they ordered
+- [ ] in admin pannel in orders section, admin can see which items are placed by customers and table number, now when admin clicks on the table number it should show the details of that table like which items are placed and how many quantity and if there are any modifications made for the items, but in place of item names, it should show the modifier instead of item name like, garlic nan (less spice)
+- [ ] also the time stamping is incorrect in all the places, it should use indian standard time  & time should be accurate
+- [ ] in admin pannel when i go in table management, it should also show me option to download qr code in image form 
