@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../../api';
+import { toIST } from '../../lib/utils';
 
 const KOTHistory = () => {
   const [kots, setKots] = useState([]);
@@ -43,13 +44,14 @@ const KOTHistory = () => {
                     {kot.items.map((item, idx) => (
                       <span key={idx}>
                         {item.quantity}x {item.name}
+                        {item.special_notes && item.special_notes.trim() !== '' ? ` (${item.special_notes})` : ''}
                         {idx < kot.items.length - 1 ? ', ' : ''}
                       </span>
                     ))}
                   </div>
                 </td>
                 <td className="p-4 text-sm text-gray-500">
-                  {new Date(kot.generated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  {toIST(kot.generated_at)}
                 </td>
               </tr>
             ))}

@@ -80,25 +80,34 @@ const CartPage = () => {
 
       <div className="p-4 space-y-4">
         {items.map(item => (
-          <div key={item.menuItemId} className="bg-white p-4 rounded-xl shadow-sm border">
+          <div key={`${item.menuItemId}-${item.specialNotes || 'none'}`} className="bg-white p-4 rounded-xl shadow-sm border">
             <div className="flex justify-between items-start">
               <div>
                 <h3 className="font-bold">{item.name}</h3>
+                {item.specialNotes && (
+                  <p className="text-xs text-orange-600 font-semibold mt-1">📝 {item.specialNotes}</p>
+                )}
                 <p className="font-semibold text-gray-600 mt-1">₹{item.price * item.quantity}</p>
               </div>
               <div className="flex items-center gap-3 bg-red-50 rounded-lg px-2 py-1 border border-red-100">
-                <button onClick={() => updateQuantity(item.menuItemId, -1)} className="p-1">
+                <button onClick={() => {
+                  if (item.quantity === 1) {
+                    removeItem(item.menuItemId, item.specialNotes);
+                  } else {
+                    updateQuantity(item.menuItemId, -1, item.specialNotes);
+                  }
+                }} className="p-1">
                   {item.quantity === 1 ? <Trash2 size={16} className="text-red-500"/> : <Minus size={16}/>}
                 </button>
                 <span className="font-bold w-4 text-center">{item.quantity}</span>
-                <button onClick={() => updateQuantity(item.menuItemId, 1)} className="p-1"><Plus size={16}/></button>
+                <button onClick={() => updateQuantity(item.menuItemId, 1, item.specialNotes)} className="p-1"><Plus size={16}/></button>
               </div>
             </div>
             <input 
               type="text" 
               placeholder="Add cooking instructions (e.g. Less spicy, Jain)" 
-              value={item.specialNotes}
-              onChange={(e) => updateNotes(item.menuItemId, e.target.value)}
+              value={item.specialNotes || ''}
+              onChange={(e) => updateNotes(item.menuItemId, e.target.value, item.specialNotes)}
               className="w-full mt-3 text-sm p-2 border rounded-md bg-gray-50"
             />
           </div>

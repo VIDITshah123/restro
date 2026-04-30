@@ -1,7 +1,48 @@
-- [ ] in kot & admin pannels, if i choose a particular choice like garlic nan with less spice, its showing garlic nan only not with the modifier, also if i add two choices for any dish, like less spice and jain, its showing only one choice in the KOT  
-- [ ] while selecting & adding items in cart, when i modify it there, it is not applied but when i go in cart section & give special instruction it is applied, i want the special instruction to be applied at the time of selecting or adding it in cart only, not in cart section
-- [ ]  in billing page, if a customer requestes to get the bill, the table should show some change for that table, like colour change to highlight it or something like that....before, a notification used to pop up but now it is not happening
-- [ ]  the option for request for bill should be visible to customer in menu page only like a small icon near to the cart icon, when clicked should show a pop up saying "request for bill" or "bill please", when clicked it should show"request sent successfully" and then the pop up should disappear also they can see how much is the bill amount in all they ordered
-- [ ] in admin pannel in orders section, admin can see which items are placed by customers and table number, now when admin clicks on the table number it should show the details of that table like which items are placed and how many quantity and if there are any modifications made for the items, but in place of item names, it should show the modifier instead of item name like, garlic nan (less spice)
-- [ ] also the time stamping is incorrect in all the places, it should use indian standard time  & time should be accurate
-- [ ] in admin pannel when i go in table management, it should also show me option to download qr code in image form 
+# Todo List - Restaurant Management System
+
+## Modifier & Customization Fixes
+
+- [x] **KOT: Show all modifiers** — If customer adds "Garlic Naan (Less Spicy, Jain)", KOT card must show all modifiers, not just the item name
+- [x] **KOT: Multiple modifiers visible** — When 2+ choices selected (e.g., Less Spicy + Jain), all must display in KOT, not just one
+- [x] **Cart: Added extra quantity** — Suppose, i added 1 butter naan with extra butter, then i added 1 more butter naan with no butter, the cart should be able to show customer 2 different types of butter naan also admin & kot should also be able to differentiate it
+- [x] **Admin Orders: Show modifiers** — Admin orders table must display item modifiers alongside item names
+- [x] **Cart: Apply instructions at selection time** — Special instructions set in MenuPage customization modal must apply immediately when adding to cart, not only in cart page
+
+## Billing & Table Management
+
+- [x] **Billing: Highlight bill-requested tables** — When customer requests bill, that table must visually change (color highlight/badge) in admin billing page
+- [x] **Billing: Eliminate notification** — Bill request notification must pop up in admin panel (was working before) should be stopped for admin panel
+- [x] **Menu Page: Add bill request icon** — Small icon near cart icon in customer menu header
+- [x] **Menu Page: Bill request popup** — Icon click shows popup with "Request Bill" / "Bill Please" button
+- [x] **Menu Page: Success feedback** — After clicking, show "Request sent successfully" then popup auto-closes
+- [x] **Menu Page: Show bill amount** — Popup displays current bill total from all orders placed at that table
+
+## Admin Order Details
+
+- [x] **Orders: Clickable table numbers** — Admin clicks table number → popup/modal opens with full table details
+- [x] **Orders: Show items with modifiers** — Detail popup shows items as "Garlic Naan (Less Spicy)" instead of plain item name
+- [x] **Orders: Show quantities** — Each item shows quantity count in detail popup
+- [x] **Orders: Show modifications** — All modifications clearly visible per item in detail popup
+
+## Timestamps
+
+- [x] **All pages: IST timestamps** — Convert all time displays to Indian Standard Time (UTC+5:30)
+- [x] **KOT: IST elapsed time** — "X min ago" on KOT cards uses IST
+- [x] **Admin Orders: IST time column** — Time shown in IST format (e.g., "2:45 PM")
+- [x] **Billing: IST order times** — All order timestamps in billing page use IST
+
+## QR Code Management
+
+- [x] **Tables: Download QR button** — Each table in admin table management shows download option
+- [x] **Tables: QR downloads as image** — QR downloads as PNG file named `table-{number}-qr.png`
+
+## Veg Type Customization
+
+- [x] **Veg items: Replace spice level with food type** — Veg items now show Regular / Jain / Half Jain (No Onion & Garlic) options instead of spice level
+- [x] **Non-veg items: Remove spice level** — Non-veg items no longer show spice level option in customization modal
+
+## Image Upload
+
+- [x] **Menu management: Drag & drop image upload** — Admin can drag & drop images when adding/editing menu items
+- [x] **Menu management: Image preview** — Shows preview of selected/dropped image with option to remove
+- [x] **Menu management: URL fallback** — Can still paste image URL as alternative to upload

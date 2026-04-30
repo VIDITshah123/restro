@@ -1,14 +1,28 @@
 import React, { useState, useEffect } from 'react';
+import { io } from 'socket.io-client';
 import api from '../../api';
+import { toIST } from '../../lib/utils';
 
 const BillingPage = () => {
   const [tables, setTables] = useState([]);
   const [selectedTable, setSelectedTable] = useState(null);
   const [billing, setBilling] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [billRequestedTables, setBillRequestedTables] = useState(new Set());
 
   useEffect(() => {
     fetchTables();
+
+    const socket = io('http://localhost:3000/admin');
+    socket.on('notification:bill_request', (data) => {
+      setBillRequestedTables(prev => {
+        const next = new Set(prev);
+        next.add(data.tableId || data.tableNumber);
+        return next;
+      });
+    });
+
+    return () => socket.disconnect();
   }, []);
 
   const fetchTables = async () => {
@@ -38,6 +52,11 @@ const BillingPage = () => {
     if (!confirm('Generate bill for all orders on this table and mark it as free?')) return;
     try {
       await api.post(`/billing/${selectedTable}/generate`);
+      setBillRequestedTables(prev => {
+        const next = new Set(prev);
+        next.delete(selectedTable);
+        return next;
+      });
       setBilling(null);
       setSelectedTable(null);
       fetchTables();
@@ -51,7 +70,6 @@ const BillingPage = () => {
 
   return (
     <div className="p-6 flex gap-6 h-full min-h-screen">
-      {/* Left: Table selector */}
       <div className="w-64 shrink-0">
         <h1 className="text-2xl font-bold mb-4">Billing</h1>
         <p className="text-sm text-gray-500 mb-4">Select an occupied table to view and generate their bill.</p>
@@ -63,25 +81,34 @@ const BillingPage = () => {
           </div>
         ) : (
           <div className="space-y-2">
-            {occupiedTables.map(table => (
-              <button
-                key={table.id}
-                onClick={() => fetchBilling(table.id)}
-                className={`w-full text-left px-4 py-3 rounded-xl border-2 transition-all font-bold ${
-                  selectedTable === table.id
-                    ? 'bg-black text-white border-black'
-                    : 'bg-white border-gray-200 hover:border-gray-400'
-                }`}
-              >
-                {table.table_number}
-                <span className="block text-xs font-normal opacity-60">Tap to view bill</span>
-              </button>
-            ))}
+            {occupiedTables.map(table => {
+              const isRequested = billRequestedTables.has(table.id) || billRequestedTables.has(table.table_number);
+              return (
+                <button
+                  key={table.id}
+                  onClick={() => fetchBilling(table.id)}
+                  className={`w-full text-left px-4 py-3 rounded-xl border-2 transition-all font-bold relative ${
+                    selectedTable === table.id
+                      ? 'bg-black text-white border-black'
+                      : isRequested
+                        ? 'bg-yellow-50 border-yellow-400 text-yellow-800 animate-pulse'
+                        : 'bg-white border-gray-200 hover:border-gray-400'
+                  }`}
+                >
+                  {table.table_number}
+                  {isRequested && (
+                    <span className="absolute top-1 right-2 text-xs bg-red-500 text-white px-2 py-0.5 rounded-full font-bold animate-pulse">
+                      Bill Requested!
+                    </span>
+                  )}
+                  <span className="block text-xs font-normal opacity-60">Tap to view bill</span>
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
 
-      {/* Right: Bill details */}
       <div className="flex-1">
         {!selectedTable && (
           <div className="h-full flex items-center justify-center text-gray-300">
@@ -122,7 +149,7 @@ const BillingPage = () => {
                   <div key={order.id} className="border rounded-xl overflow-hidden">
                     <div className="bg-gray-50 px-4 py-2 flex justify-between text-sm font-semibold text-gray-600">
                       <span>Order #{order.id} — {order.customer_name || 'Guest'}</span>
-                      <span>{new Date(order.placed_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      <span>{toIST(order.placed_at)}</span>
                     </div>
                     <table className="w-full text-sm">
                       <tbody className="divide-y">
@@ -148,7 +175,6 @@ const BillingPage = () => {
                   </div>
                 ))}
 
-                {/* Grand Total */}
                 <div className="border-2 border-black rounded-xl px-6 py-4 flex justify-between items-center">
                   <span className="text-lg font-bold">Grand Total</span>
                   <span className="text-3xl font-black">₹{billing.grandTotal}</span>

@@ -104,6 +104,7 @@ app.delete('/api/waiters/:id', authenticate, authorize('admin'), waiterControlle
 // Billing — get all unbilled orders for a table
 app.get('/api/billing/:tableId', authenticate, authorize(['admin', 'manager']), orderController.getBillingForTable);
 app.post('/api/billing/:tableId/generate', authenticate, authorize(['admin', 'manager']), orderController.generateTableBill);
+app.post('/api/billing/:tableId/request', orderController.requestBillByTable);
 
 // --- AI Service Proxy --- //
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));

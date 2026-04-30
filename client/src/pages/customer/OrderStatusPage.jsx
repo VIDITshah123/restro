@@ -4,6 +4,7 @@ import { useOrderStatusSocket } from '../../hooks/useSocket';
 import { useOrderStore } from '../../store';
 import api from '../../api';
 import { motion } from 'framer-motion';
+import { toIST } from '../../lib/utils';
 
 const STATUS_STEPS = [
   { key: 'placed', label: 'Order Placed', desc: 'We received your order' },

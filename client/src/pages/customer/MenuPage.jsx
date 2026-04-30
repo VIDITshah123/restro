@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSessionStore, useCartStore } from '../../store';
 import api from '../../api';
-import { ShoppingCart } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { ShoppingCart, Receipt, X, CheckCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const MenuPage = () => {
   const { tableId } = useParams();
@@ -21,7 +21,10 @@ const MenuPage = () => {
   const [recommendations, setRecommendations] = useState([]);
 
   const [customizingItem, setCustomizingItem] = useState(null);
-  const [customOptions, setCustomOptions] = useState({ selectedVariantId: null, selectedVariantName: 'Base', selectedVariantPrice: null, spicy: 'Standard', noMushroom: false, text: '' });
+  const [customOptions, setCustomOptions] = useState({ selectedVariantId: null, selectedVariantName: 'Base', selectedVariantPrice: null, vegType: 'Regular', noMushroom: false, text: '' });
+  const [showBillPopup, setShowBillPopup] = useState(false);
+  const [billRequested, setBillRequested] = useState(false);
+  const [billAmount, setBillAmount] = useState(0);
 
   const handleAddClick = (item) => {
     setCustomizingItem(item);
@@ -29,7 +32,7 @@ const MenuPage = () => {
       selectedVariantId: null, 
       selectedVariantName: 'Base', 
       selectedVariantPrice: null, 
-      spicy: 'Standard', 
+      vegType: 'Regular', 
       noMushroom: false, 
       text: '' 
     });
@@ -38,7 +41,7 @@ const MenuPage = () => {
   const confirmAdd = () => {
     let notes = [];
     if (customOptions.selectedVariantName !== 'Base') notes.push(customOptions.selectedVariantName);
-    if (customOptions.spicy !== 'Standard') notes.push(customOptions.spicy);
+    if (customizingItem.is_veg && customOptions.vegType !== 'Regular') notes.push(customOptions.vegType);
     if (customOptions.noMushroom) notes.push('Without Mushroom');
     if (customOptions.text) notes.push(customOptions.text);
     
@@ -55,6 +58,32 @@ const MenuPage = () => {
       specialNotes: notes.join(', ')
     });
     setCustomizingItem(null);
+  };
+
+  const handleBillRequest = async () => {
+    try {
+      const res = await api.get(`/billing/${tableId}`);
+      setBillAmount(res.data.data.grandTotal || 0);
+      setShowBillPopup(true);
+      setBillRequested(false);
+    } catch (err) {
+      console.error(err);
+      setBillAmount(0);
+      setShowBillPopup(true);
+    }
+  };
+
+  const submitBillRequest = async () => {
+    try {
+      await api.post(`/billing/${tableId}/request`);
+      setBillRequested(true);
+      setTimeout(() => {
+        setShowBillPopup(false);
+        setBillRequested(false);
+      }, 2000);
+    } catch (err) {
+      alert('Failed to request bill');
+    }
   };
 
   useEffect(() => {
@@ -99,17 +128,25 @@ const MenuPage = () => {
           <h1 className="text-xl font-bold">Menu</h1>
           <p className="text-sm text-gray-500">{tableNumber || 'Loading table...'}</p>
         </div>
-        <button 
-          onClick={() => navigate('/cart')} 
-          className="relative p-2 bg-gray-100 rounded-full"
-        >
-          <ShoppingCart size={24} />
-          {cartItems.length > 0 && (
-            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
-              {cartItems.length}
-            </span>
-          )}
-        </button>
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={handleBillRequest} 
+            className="relative p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors"
+          >
+            <Receipt size={24} />
+          </button>
+          <button 
+            onClick={() => navigate('/cart')} 
+            className="relative p-2 bg-gray-100 rounded-full"
+          >
+            <ShoppingCart size={24} />
+            {cartItems.length > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
+                {cartItems.length}
+              </span>
+            )}
+          </button>
+        </div>
       </header>
 
       {/* Search & Filters */}
@@ -251,18 +288,20 @@ const MenuPage = () => {
                 </div>
               )}
 
-              {/* Spice Level Radio */}
-              <div>
-                <h3 className="font-semibold mb-2">Spice Level</h3>
-                <div className="flex gap-3">
-                  {['Standard', 'Less Spicy'].map(opt => (
-                    <label key={opt} className="flex items-center gap-2 cursor-pointer">
-                      <input type="radio" name="spicy" checked={customOptions.spicy === opt} onChange={() => setCustomOptions(p => ({ ...p, spicy: opt }))} className="accent-black" />
-                      <span className="text-sm">{opt}</span>
-                    </label>
-                  ))}
+              {/* Veg Type Options (Veg items only) */}
+              {customizingItem.is_veg && (
+                <div>
+                  <h3 className="font-semibold mb-2">Food Type</h3>
+                  <div className="space-y-2">
+                    {['Regular', 'Jain', 'Half Jain (No Onion & Garlic)'].map(opt => (
+                      <label key={opt} className="flex items-center gap-2 cursor-pointer p-2 border rounded-lg hover:bg-gray-50">
+                        <input type="radio" name="vegType" checked={customOptions.vegType === opt} onChange={() => setCustomOptions(p => ({ ...p, vegType: opt }))} className="accent-black" />
+                        <span className="text-sm font-medium">{opt}</span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Mushroom checkbox */}
               {customizingItem.name.toLowerCase().includes('mushroom') && (
@@ -293,6 +332,64 @@ const MenuPage = () => {
           </div>
         </div>
       )}
+
+      {/* Bill Request Popup */}
+      <AnimatePresence>
+        {showBillPopup && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-[110] flex items-center justify-center p-4"
+            onClick={() => !billRequested && setShowBillPopup(false)}
+          >
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6"
+              onClick={e => e.stopPropagation()}
+            >
+              {billRequested ? (
+                <div className="text-center py-4">
+                  <CheckCircle size={48} className="text-green-500 mx-auto mb-3" />
+                  <h3 className="text-xl font-bold text-green-700">Request Sent Successfully!</h3>
+                  <p className="text-gray-500 mt-2">Your bill request has been sent to the admin.</p>
+                </div>
+              ) : (
+                <>
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h2 className="text-xl font-bold">Request Bill</h2>
+                      <p className="text-gray-500 text-sm">{tableNumber}</p>
+                    </div>
+                    <button onClick={() => setShowBillPopup(false)} className="text-gray-400 p-1">
+                      <X size={20} />
+                    </button>
+                  </div>
+                  
+                  {billAmount > 0 ? (
+                    <div className="bg-gray-50 rounded-xl p-4 mb-4">
+                      <p className="text-sm text-gray-500 mb-1">Current Bill Amount</p>
+                      <p className="text-3xl font-black">₹{billAmount}</p>
+                    </div>
+                  ) : (
+                    <p className="text-gray-400 text-center py-4 mb-4">No orders placed yet</p>
+                  )}
+                  
+                  <button
+                    onClick={submitBillRequest}
+                    disabled={billAmount === 0}
+                    className="w-full bg-black text-white font-bold py-3 rounded-xl disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    Request Bill
+                  </button>
+                </>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

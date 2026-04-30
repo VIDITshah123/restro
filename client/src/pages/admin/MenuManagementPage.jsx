@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import api from '../../api';
+import { Upload, X, Image as ImageIcon } from 'lucide-react';
 
 const MenuManagementPage = () => {
   const [menu, setMenu] = useState([]);
@@ -19,6 +20,10 @@ const MenuManagementPage = () => {
     is_veg: 1,
     is_available: 1
   });
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef(null);
 
   const fetchMenu = async () => {
     try {
@@ -56,13 +61,60 @@ const MenuManagementPage = () => {
         is_veg: item.is_veg,
         is_available: item.is_available
       });
+      setImagePreview(item.image_url || null);
     } else {
       setEditingItem(null);
       setFormData({
         name: '', description: '', price: '', category: '', image_url: '', is_veg: 1, is_available: 1
       });
+      setImagePreview(null);
     }
+    setImageFile(null);
     setIsModalOpen(true);
+  };
+
+  const handleImageSelect = (file) => {
+    if (!file) return;
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImagePreview(reader.result);
+      setFormData(prev => ({ ...prev, image_url: reader.result }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleDragOver = useCallback((e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e) => {
+    e.preventDefault();
+    setIsDragging(false);
+  }, []);
+
+  const handleDrop = useCallback((e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) {
+      handleImageSelect(file);
+    }
+  }, []);
+
+  const handleFileInputChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      handleImageSelect(file);
+    }
+  };
+
+  const removeImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+    setFormData(prev => ({ ...prev, image_url: '' }));
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleSave = async (e) => {
@@ -74,6 +126,8 @@ const MenuManagementPage = () => {
         await api.post('/menu', formData);
       }
       setIsModalOpen(false);
+      setImageFile(null);
+      setImagePreview(null);
       fetchMenu();
     } catch (err) {
       alert('Error saving menu item');
@@ -250,8 +304,53 @@ const MenuManagementPage = () => {
                 <textarea rows="2" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="w-full border rounded-lg p-2"></textarea>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Image URL</label>
-                <input type="text" value={formData.image_url} onChange={e => setFormData({...formData, image_url: e.target.value})} className="w-full border rounded-lg p-2" />
+                <label className="block text-sm font-medium mb-1">Image</label>
+                <div
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
+                    isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'
+                  }`}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileInputChange}
+                    className="hidden"
+                  />
+                  {imagePreview ? (
+                    <div className="relative">
+                      <img src={imagePreview} alt="Preview" className="w-32 h-32 object-cover rounded-lg mx-auto mb-2" />
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); removeImage(); }}
+                        className="absolute top-1 right-1/2 translate-x-16 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                      >
+                        <X size={14} />
+                      </button>
+                      <p className="text-sm text-gray-500">Click or drop to replace</p>
+                    </div>
+                  ) : (
+                    <div className="py-4">
+                      <Upload size={24} className="mx-auto text-gray-400 mb-2" />
+                      <p className="text-sm font-medium text-gray-600">Drag & drop an image here</p>
+                      <p className="text-xs text-gray-400 mt-1">or click to browse</p>
+                    </div>
+                  )}
+                </div>
+                <input
+                  type="text"
+                  value={formData.image_url}
+                  onChange={e => {
+                    setFormData({...formData, image_url: e.target.value});
+                    if (e.target.value) setImagePreview(e.target.value);
+                  }}
+                  placeholder="Or paste image URL here"
+                  className="w-full border rounded-lg p-2 mt-2 text-sm"
+                />
               </div>
               <div className="flex gap-4">
                 <label className="flex items-center gap-2 cursor-pointer">

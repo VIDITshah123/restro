@@ -19,32 +19,39 @@ export const useSessionStore = create(persist((set) => ({
 export const useCartStore = create(persist((set, get) => ({
   items: [], // { menuItemId, name, price, quantity, specialNotes, is_veg }
   addItem: (item) => set((state) => {
-    const existing = state.items.find(i => i.menuItemId === item.menuItemId);
+    // Match by menuItemId AND specialNotes so same dish with different mods stays separate
+    const existing = state.items.find(i => 
+      i.menuItemId === item.menuItemId && i.specialNotes === (item.specialNotes || '')
+    );
     if (existing) {
       return {
         items: state.items.map(i => 
-          i.menuItemId === item.menuItemId 
+          i.menuItemId === item.menuItemId && i.specialNotes === (item.specialNotes || '')
             ? { ...i, quantity: i.quantity + (item.quantity || 1) } 
             : i
         )
       };
     }
-    return { items: [...state.items, { ...item, quantity: item.quantity || 1, specialNotes: '' }] };
+    return { items: [...state.items, { ...item, quantity: item.quantity || 1, specialNotes: item.specialNotes || '' }] };
   }),
-  removeItem: (menuItemId) => set((state) => ({
-    items: state.items.filter(i => i.menuItemId !== menuItemId)
+  removeItem: (menuItemId, specialNotes) => set((state) => ({
+    items: state.items.filter(i => !(i.menuItemId === menuItemId && i.specialNotes === specialNotes))
   })),
-  updateQuantity: (menuItemId, delta) => set((state) => ({
+  updateQuantity: (menuItemId, delta, specialNotes) => set((state) => ({
     items: state.items.map(i => {
-      if (i.menuItemId === menuItemId) {
+      if (i.menuItemId === menuItemId && i.specialNotes === specialNotes) {
         const newQ = i.quantity + delta;
         return newQ > 0 ? { ...i, quantity: newQ } : i;
       }
       return i;
     })
   })),
-  updateNotes: (menuItemId, specialNotes) => set((state) => ({
-    items: state.items.map(i => i.menuItemId === menuItemId ? { ...i, specialNotes } : i)
+  updateNotes: (menuItemId, specialNotes, oldNotes) => set((state) => ({
+    items: state.items.map(i => 
+      i.menuItemId === menuItemId && i.specialNotes === oldNotes 
+        ? { ...i, specialNotes } 
+        : i
+    )
   })),
   clearCart: () => set({ items: [] }),
   getTotal: () => get().items.reduce((sum, item) => sum + item.price * item.quantity, 0)

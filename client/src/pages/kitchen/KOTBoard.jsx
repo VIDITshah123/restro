@@ -7,10 +7,10 @@ const KOTCard = ({ kot, onStatusUpdate }) => {
   const [elapsed, setElapsed] = useState(0);
 
   useEffect(() => {
-    const start = new Date(kot.generated_at).getTime();
+    const start = new Date(kot.generated_at + 'Z').getTime();
     const updateElapsed = () => {
       const now = new Date().getTime();
-      setElapsed(Math.floor((now - start) / 60000)); // in minutes
+      setElapsed(Math.floor((now - start) / 60000));
     };
     updateElapsed();
     const interval = setInterval(updateElapsed, 60000);
@@ -66,7 +66,6 @@ const KOTCard = ({ kot, onStatusUpdate }) => {
             <span className="font-bold">{item.quantity}x</span>
             <div>
               <p className="font-medium">{item.name}</p>
-              {/* Show special notes only if non-empty */}
               {item.special_notes && item.special_notes.trim() !== '' && (
                 <span className="inline-block mt-1 bg-orange-100 text-orange-800 text-xs px-2 py-0.5 rounded font-bold">
                   📝 {item.special_notes}

@@ -31,13 +31,14 @@ const createOrder = (req, res) => {
     // Fetch the complete KOT to emit
     const kot = db.prepare('SELECT * FROM kot WHERE order_id = ?').get(orderId);
     kot.items = db.prepare(`
-      SELECT oi.*, m.name, m.is_veg 
+      SELECT oi.id, oi.quantity, oi.special_notes, oi.menu_item_id, m.name, m.is_veg 
       FROM order_items oi 
       JOIN menu_items m ON oi.menu_item_id = m.id 
       WHERE oi.order_id = ?
     `).all(orderId);
     
     const table = db.prepare('SELECT table_number FROM tables WHERE id = ?').get(tableId);
+    kot.table_number = table.table_number;
     kot.tableNumber = table.table_number;
 
     if (req.io) {
@@ -118,7 +119,18 @@ const requestBill = (req, res) => {
   if (!order) return res.status(404).json({ success: false });
   
   if (req.io) {
-    req.io.of('/admin').emit('notification:bill_request', { tableNumber: order.table_number, orderId: id });
+    req.io.of('/admin').emit('notification:bill_request', { tableNumber: order.table_number, tableId: order.table_id, orderId: id });
+  }
+  res.json({ success: true });
+};
+
+const requestBillByTable = (req, res) => {
+  const { tableId } = req.params;
+  const table = db.prepare('SELECT table_number FROM tables WHERE id = ?').get(tableId);
+  if (!table) return res.status(404).json({ success: false });
+  
+  if (req.io) {
+    req.io.of('/admin').emit('notification:bill_request', { tableNumber: table.table_number, tableId: parseInt(tableId) });
   }
   res.json({ success: true });
 };
@@ -195,6 +207,7 @@ module.exports = {
   updateOrderStatus,
   generateBill,
   requestBill,
+  requestBillByTable,
   getBillingForTable,
   generateTableBill,
 };

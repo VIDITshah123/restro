@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../api';
+import { toIST } from '../../lib/utils';
 
 const STATUS_COLORS = {
   placed:    'bg-blue-100 text-blue-700',
@@ -9,8 +10,74 @@ const STATUS_COLORS = {
   billed:    'bg-gray-200 text-gray-600',
 };
 
+const OrderDetailModal = ({ order, onClose }) => {
+  const [details, setDetails] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDetails = async () => {
+      try {
+        const res = await api.get(`/orders/${order.id}`);
+        setDetails(res.data.data);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDetails();
+  }, [order.id]);
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="p-6">
+          <div className="flex justify-between items-start mb-4">
+            <div>
+              <h2 className="text-xl font-bold">Order #{order.id}</h2>
+              <p className="text-gray-500">{order.table_number} • {order.customer_name || 'Guest'}</p>
+            </div>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+          </div>
+          
+          {loading ? (
+            <p className="text-gray-400 text-center py-8">Loading details...</p>
+          ) : details && details.items ? (
+            <div className="space-y-3">
+              {details.items.map(item => (
+                <div key={item.id} className="border-b pb-3 last:border-b-0">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <p className="font-bold text-gray-800">
+                        {item.quantity}x {item.name}
+                      </p>
+                      {item.special_notes && item.special_notes.trim() !== '' && (
+                        <p className="text-sm text-orange-600 font-semibold mt-1">
+                          📝 {item.special_notes}
+                        </p>
+                      )}
+                    </div>
+                    <span className="font-medium text-gray-700">₹{item.price * item.quantity}</span>
+                  </div>
+                </div>
+              ))}
+              <div className="border-t-2 border-black pt-3 mt-4 flex justify-between items-center">
+                <span className="text-lg font-bold">Total</span>
+                <span className="text-2xl font-black">₹{details.total_amount}</span>
+              </div>
+            </div>
+          ) : (
+            <p className="text-gray-400 text-center py-8">No details available</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const OrdersPage = () => {
   const [orders, setOrders] = useState([]);
+  const [selectedOrder, setSelectedOrder] = useState(null);
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -22,7 +89,6 @@ const OrdersPage = () => {
       }
     };
     fetchOrders();
-    // Refresh every 30 seconds
     const interval = setInterval(fetchOrders, 30000);
     return () => clearInterval(interval);
   }, []);
@@ -52,7 +118,14 @@ const OrdersPage = () => {
             {orders.map(order => (
               <tr key={order.id} className="hover:bg-gray-50">
                 <td className="p-4 font-bold text-gray-800">#{order.id}</td>
-                <td className="p-4 text-gray-700">{order.table_number}</td>
+                <td className="p-4">
+                  <button 
+                    onClick={() => setSelectedOrder(order)}
+                    className="text-blue-600 hover:text-blue-800 font-semibold underline"
+                  >
+                    {order.table_number}
+                  </button>
+                </td>
                 <td className="p-4 text-gray-700">{order.customer_name || 'Guest'}</td>
                 <td className="p-4 font-medium text-gray-800">₹{order.total_amount}</td>
                 <td className="p-4">
@@ -61,16 +134,17 @@ const OrdersPage = () => {
                   </span>
                 </td>
                 <td className="p-4 text-sm text-gray-500">
-                  {new Date(order.placed_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  <span className="text-xs block text-gray-400">
-                    {new Date(order.placed_at).toLocaleDateString()}
-                  </span>
+                  {toIST(order.placed_at)}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {selectedOrder && (
+        <OrderDetailModal order={selectedOrder} onClose={() => setSelectedOrder(null)} />
+      )}
     </div>
   );
 };
