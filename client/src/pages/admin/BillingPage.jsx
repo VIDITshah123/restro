@@ -25,6 +25,7 @@ const BillingPage = () => {
 
   const persistBillRequests = (tableSet) => {
     localStorage.setItem('billRequestedTables', JSON.stringify([...tableSet]));
+    window.dispatchEvent(new Event('billRequestsUpdated'));
   };
 
   const addNotification = (message) => {

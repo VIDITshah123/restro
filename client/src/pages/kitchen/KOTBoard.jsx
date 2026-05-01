@@ -61,11 +61,20 @@ const KOTCard = ({ kot, onStatusUpdate }) => {
       </div>
 
       <div className="flex-1 overflow-y-auto mb-4 space-y-2">
-        {kot.items.map((item, idx) => (
+        {kot.items.map((item, idx) => {
+          const notesLower = (item.special_notes || '').toLowerCase();
+          let highlightClass = "";
+          if (notesLower.includes('half jain')) {
+            highlightClass = "text-yellow-600 font-bold bg-yellow-50 px-1 rounded";
+          } else if (notesLower.includes('jain')) {
+            highlightClass = "text-red-600 font-bold bg-red-50 px-1 rounded";
+          }
+
+          return (
           <div key={idx} className="flex gap-2 text-lg">
             <span className="font-bold">{item.quantity}x</span>
             <div>
-              <p className="font-medium">{item.name}</p>
+              <p className={`font-medium ${highlightClass}`}>{item.name}</p>
               {item.special_notes && item.special_notes.trim() !== '' && (
                 <span className="inline-block mt-1 bg-orange-100 text-orange-800 text-xs px-2 py-0.5 rounded font-bold">
                   📝 {item.special_notes}
@@ -73,7 +82,7 @@ const KOTCard = ({ kot, onStatusUpdate }) => {
               )}
             </div>
           </div>
-        ))}
+        )})}
       </div>
 
       <div className="flex gap-2 mt-auto">

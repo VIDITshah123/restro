@@ -1,7 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store';
 import { LayoutDashboard, ListOrdered, MenuSquare, Grid, BarChart3, History, LogOut, Receipt, Users } from 'lucide-react';
+import { io } from 'socket.io-client';
 
 const AdminLayout = () => {
   const { logout, email } = useAuthStore();
@@ -11,6 +12,48 @@ const AdminLayout = () => {
     logout();
     navigate('/admin/login');
   };
+
+  const [hasBillRequests, setHasBillRequests] = useState(false);
+
+  useEffect(() => {
+    const checkRequests = () => {
+      try {
+        const stored = localStorage.getItem('billRequestedTables');
+        if (stored) {
+          const reqs = JSON.parse(stored);
+          setHasBillRequests(reqs.length > 0);
+        } else {
+          setHasBillRequests(false);
+        }
+      } catch (e) {}
+    };
+
+    checkRequests();
+    
+    // Listen to localStorage changes (from BillingPage or other tabs)
+    window.addEventListener('storage', checkRequests);
+    // Custom event to sync within the same window
+    window.addEventListener('billRequestsUpdated', checkRequests);
+
+    const socket = io('http://localhost:3000/admin');
+    socket.on('notification:bill_request', (data) => {
+      try {
+        const stored = localStorage.getItem('billRequestedTables');
+        const reqs = stored ? new Set(JSON.parse(stored)) : new Set();
+        reqs.add(data.tableId || data.tableNumber);
+        localStorage.setItem('billRequestedTables', JSON.stringify([...reqs]));
+        setHasBillRequests(true);
+        // Also dispatch event for other components in same window
+        window.dispatchEvent(new Event('billRequestsUpdated'));
+      } catch (e) {}
+    });
+
+    return () => {
+      window.removeEventListener('storage', checkRequests);
+      window.removeEventListener('billRequestsUpdated', checkRequests);
+      socket.disconnect();
+    };
+  }, []);
 
   const navItems = [
     { name: 'Dashboard', path: '/admin/dashboard', icon: <LayoutDashboard size={20} /> },
@@ -36,10 +79,18 @@ const AdminLayout = () => {
             <Link 
               key={item.path} 
               to={item.path} 
-              className="flex items-center gap-3 px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg font-medium transition-colors"
+              className="flex items-center justify-between px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg font-medium transition-colors"
             >
-              {item.icon}
-              {item.name}
+              <div className="flex items-center gap-3">
+                {item.icon}
+                {item.name}
+              </div>
+              {item.name === 'Billing' && hasBillRequests && (
+                <span className="flex h-3 w-3 relative">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                </span>
+              )}
             </Link>
           ))}
         </nav>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../../api';
-import { Download, Trash2 } from 'lucide-react';
+import { Download, Trash2, ShoppingBag } from 'lucide-react';
 
 const TablesPage = () => {
   const [tables, setTables] = useState([]);
@@ -96,16 +96,25 @@ const TablesPage = () => {
               <img src={table.qr_code_url} alt={`QR for ${table.table_number}`} className="w-32 h-32 mb-4 border p-1" />
             )}
 
-            <div className="flex gap-2 w-full">
+            <div className="flex flex-col gap-2 w-full">
               <button 
-                onClick={() => downloadQR(table)}
-                className="flex-1 bg-blue-50 text-blue-600 font-medium text-sm py-2 rounded-lg border border-blue-200 hover:bg-blue-100 transition-colors flex items-center justify-center gap-1"
+                onClick={() => window.open(`/menu/${table.id}`, '_blank')}
+                className="w-full bg-orange-50 text-orange-600 font-bold text-sm py-2 rounded-lg border border-orange-200 hover:bg-orange-100 transition-colors flex items-center justify-center gap-1"
               >
-                <Download size={14} />
-                Download QR
+                <ShoppingBag size={14} />
+                Place Order
               </button>
-              <button 
-                onClick={async () => {
+              
+              <div className="flex gap-2 w-full">
+                <button 
+                  onClick={() => downloadQR(table)}
+                  className="flex-1 bg-blue-50 text-blue-600 font-medium text-sm py-2 rounded-lg border border-blue-200 hover:bg-blue-100 transition-colors flex items-center justify-center gap-1"
+                >
+                  <Download size={14} />
+                  Download QR
+                </button>
+                <button 
+                  onClick={async () => {
                   if (!confirm(`Delete ${table.table_number}? This cannot be undone.`)) return;
                   try {
                     await api.delete(`/tables/${table.id}`);
@@ -118,7 +127,8 @@ const TablesPage = () => {
                 className="text-red-500 font-medium text-sm hover:underline px-2 flex items-center"
               >
                 <Trash2 size={14} />
-              </button>
+                </button>
+              </div>
             </div>
           </div>
         ))}
