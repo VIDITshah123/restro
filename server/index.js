@@ -83,11 +83,13 @@ app.get('/api/orders/:id', orderController.getOrderById);
 app.patch('/api/orders/:id/status', authenticate, authorize(['admin', 'manager']), orderController.updateOrderStatus);
 app.post('/api/orders/:id/bill', authenticate, authorize(['admin', 'manager']), orderController.generateBill);
 app.post('/api/orders/:id/request-bill', orderController.requestBill);
+app.delete('/api/orders/history/clear', authenticate, authorize('admin'), orderController.clearOrderHistory);
 
 // KOT
 app.get('/api/kot', authenticate, kotController.getKot);
 app.get('/api/kot/history', authenticate, kotController.getKotHistory);
 app.patch('/api/kot/:id/status', authenticate, kotController.updateKotStatus);
+app.delete('/api/kot/history/clear', authenticate, authorize('admin'), orderController.clearKotHistory);
 
 // Analytics
 app.get('/api/analytics/today', authenticate, authorize('admin'), analyticsController.getTodayAnalytics);

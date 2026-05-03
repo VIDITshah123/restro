@@ -10,6 +10,7 @@ const MenuManagementPage = () => {
   const [variantPanelItem, setVariantPanelItem] = useState(null);
   const [variants, setVariants] = useState([]);
   const [variantForm, setVariantForm] = useState({ name: '', price: '' });
+  const [sortOption, setSortOption] = useState('Default');
   
   const [formData, setFormData] = useState({
     name: '',
@@ -18,7 +19,8 @@ const MenuManagementPage = () => {
     category: '',
     image_url: '',
     is_veg: 1,
-    is_available: 1
+    is_available: 1,
+    tags: []
   });
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
@@ -59,13 +61,14 @@ const MenuManagementPage = () => {
         category: item.category,
         image_url: item.image_url || '',
         is_veg: item.is_veg,
-        is_available: item.is_available
+        is_available: item.is_available,
+        tags: item.tags ? (typeof item.tags === 'string' ? JSON.parse(item.tags) : item.tags) : []
       });
       setImagePreview(item.image_url || null);
     } else {
       setEditingItem(null);
       setFormData({
-        name: '', description: '', price: '', category: '', image_url: '', is_veg: 1, is_available: 1
+        name: '', description: '', price: '', category: '', image_url: '', is_veg: 1, is_available: 1, tags: []
       });
       setImagePreview(null);
     }
@@ -119,11 +122,12 @@ const MenuManagementPage = () => {
 
   const handleSave = async (e) => {
     e.preventDefault();
+    const payload = { ...formData, tags: JSON.stringify(formData.tags) };
     try {
       if (editingItem) {
-        await api.put(`/menu/${editingItem.id}`, formData);
+        await api.put(`/menu/${editingItem.id}`, payload);
       } else {
-        await api.post('/menu', formData);
+        await api.post('/menu', payload);
       }
       setIsModalOpen(false);
       setImageFile(null);
@@ -172,13 +176,34 @@ const MenuManagementPage = () => {
     }
   };
 
+  const sortedMenu = [...menu].sort((a, b) => {
+    if (sortOption === 'Price (Low to High)') return a.price - b.price;
+    if (sortOption === 'Price (High to Low)') return b.price - a.price;
+    if (sortOption === 'Category (A-Z)') return a.category.localeCompare(b.category);
+    if (sortOption === 'Name (A-Z)') return a.name.localeCompare(b.name);
+    return 0;
+  });
+
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Menu Management</h1>
-        <button onClick={() => handleOpenModal()} className="bg-black text-white px-4 py-2 rounded-lg font-medium">
-          + Add New Item
-        </button>
+        <div className="flex items-center gap-4">
+          <select 
+            value={sortOption} 
+            onChange={e => setSortOption(e.target.value)}
+            className="border p-2 rounded-lg text-sm bg-white outline-none"
+          >
+            <option>Default</option>
+            <option>Name (A-Z)</option>
+            <option>Category (A-Z)</option>
+            <option>Price (Low to High)</option>
+            <option>Price (High to Low)</option>
+          </select>
+          <button onClick={() => handleOpenModal()} className="bg-black text-white px-4 py-2 rounded-lg font-medium">
+            + Add New Item
+          </button>
+        </div>
       </div>
       
       <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
@@ -194,7 +219,7 @@ const MenuManagementPage = () => {
             </tr>
           </thead>
           <tbody className="divide-y">
-            {menu.map(item => (
+            {sortedMenu.map(item => (
               <tr key={item.id} className="hover:bg-gray-50">
                 <td className="p-4 font-bold">{item.name}</td>
                 <td className="p-4">{item.category}</td>
@@ -361,6 +386,41 @@ const MenuManagementPage = () => {
                   <input type="radio" name="is_veg" checked={formData.is_veg === 0} onChange={() => setFormData({...formData, is_veg: 0})} className="accent-black" />
                   <span className="text-sm font-medium text-red-700">Non-Veg</span>
                 </label>
+              </div>
+
+              {/* Tag options for Jain / Half Jain */}
+              <div className="pt-2 border-t mt-4">
+                <p className="text-sm font-medium mb-2">Available Food Types</p>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={formData.tags.includes('Jain')} 
+                      onChange={(e) => {
+                        const tags = e.target.checked 
+                          ? [...formData.tags, 'Jain'] 
+                          : formData.tags.filter(t => t !== 'Jain');
+                        setFormData({...formData, tags});
+                      }} 
+                      className="accent-black" 
+                    />
+                    <span className="text-sm font-medium">Jain</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={formData.tags.includes('Half Jain')} 
+                      onChange={(e) => {
+                        const tags = e.target.checked 
+                          ? [...formData.tags, 'Half Jain'] 
+                          : formData.tags.filter(t => t !== 'Half Jain');
+                        setFormData({...formData, tags});
+                      }} 
+                      className="accent-black" 
+                    />
+                    <span className="text-sm font-medium">Half Jain (No Onion/Garlic)</span>
+                  </label>
+                </div>
               </div>
               
               <div className="flex justify-end gap-3 pt-4 mt-2 border-t">

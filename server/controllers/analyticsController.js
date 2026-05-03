@@ -36,7 +36,6 @@ const getTopDishes = (req, res) => {
     FROM order_items oi
     JOIN menu_items m ON oi.menu_item_id = m.id
     JOIN orders o ON oi.order_id = o.id
-    WHERE o.status = 'served'
     GROUP BY m.id
     ORDER BY total_sold DESC
     LIMIT ?

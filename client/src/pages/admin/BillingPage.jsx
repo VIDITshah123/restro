@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { io } from 'socket.io-client';
 import api from '../../api';
-import { toIST } from '../../lib/utils';
+import { toIST, toISTFull } from '../../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bell, X } from 'lucide-react';
 
@@ -11,6 +11,8 @@ const BillingPage = () => {
   const [billing, setBilling] = useState(null);
   const [loading, setLoading] = useState(false);
   const [notifications, setNotifications] = useState([]);
+  const [paymentMethod, setPaymentMethod] = useState('Cash');
+  const [sortOption, setSortOption] = useState('Table (Asc)');
   
   const loadBillRequests = () => {
     try {
@@ -104,9 +106,9 @@ const BillingPage = () => {
 
   const handleGenerateBill = async () => {
     if (!selectedTable) return;
-    if (!confirm('Generate bill for all orders on this table and mark it as free?')) return;
+    if (!confirm(`Generate bill? Payment method: ${paymentMethod}`)) return;
     try {
-      await api.post(`/billing/${selectedTable}/generate`);
+      await api.post(`/billing/${selectedTable}/generate`, { payment_method: paymentMethod });
       setBillRequestedTables(prev => {
         const next = new Set(prev);
         next.delete(selectedTable);
@@ -122,12 +124,27 @@ const BillingPage = () => {
     }
   };
 
-  const occupiedTables = tables.filter(t => t.is_occupied);
+  let occupiedTables = tables.filter(t => t.is_occupied);
+  if (sortOption === 'Table (Asc)') {
+    occupiedTables.sort((a,b) => a.table_number.localeCompare(b.table_number, undefined, {numeric: true}));
+  } else if (sortOption === 'Table (Desc)') {
+    occupiedTables.sort((a,b) => b.table_number.localeCompare(a.table_number, undefined, {numeric: true}));
+  }
 
   return (
     <div className="p-6 flex gap-6 h-full min-h-screen">
       <div className="w-64 shrink-0">
-        <h1 className="text-2xl font-bold mb-4">Billing</h1>
+        <div className="flex justify-between items-center mb-4">
+          <h1 className="text-2xl font-bold">Billing</h1>
+          <select 
+            value={sortOption} 
+            onChange={e => setSortOption(e.target.value)}
+            className="border p-1 rounded text-sm bg-gray-50 outline-none"
+          >
+            <option>Table (Asc)</option>
+            <option>Table (Desc)</option>
+          </select>
+        </div>
         <p className="text-sm text-gray-500 mb-4">Select an occupied table to view and generate their bill.</p>
         
         {occupiedTables.length === 0 ? (
@@ -188,13 +205,24 @@ const BillingPage = () => {
                 <h2 className="text-xl font-bold">{tables.find(t => t.id === selectedTable)?.table_number}</h2>
                 <p className="text-gray-500 text-sm">{billing.orders.length} order(s) in session</p>
               </div>
-              <button
-                onClick={handleGenerateBill}
-                disabled={billing.orders.length === 0}
-                className="bg-black text-white font-bold px-6 py-2 rounded-xl disabled:opacity-40"
-              >
-                Generate Bill
-              </button>
+              <div className="flex gap-4 items-center">
+                <select 
+                  value={paymentMethod}
+                  onChange={e => setPaymentMethod(e.target.value)}
+                  className="border-2 border-gray-200 rounded-lg px-4 py-2 font-bold outline-none"
+                >
+                  <option value="Cash">Cash</option>
+                  <option value="Online">Online / UPI</option>
+                  <option value="Card">Card</option>
+                </select>
+                <button
+                  onClick={handleGenerateBill}
+                  disabled={billing.orders.length === 0}
+                  className="bg-black text-white font-bold px-6 py-2 rounded-xl disabled:opacity-40"
+                >
+                  Generate Bill
+                </button>
+              </div>
             </div>
 
             {billing.orders.length === 0 ? (
@@ -205,7 +233,7 @@ const BillingPage = () => {
                   <div key={order.id} className="border rounded-xl overflow-hidden">
                     <div className="bg-gray-50 px-4 py-2 flex justify-between text-sm font-semibold text-gray-600">
                       <span>Order #{order.id} — {order.customer_name || 'Guest'}</span>
-                      <span>{toIST(order.placed_at)}</span>
+                      <span>{toISTFull(order.placed_at)}</span>
                     </div>
                     <table className="w-full text-sm">
                       <tbody className="divide-y">

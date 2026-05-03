@@ -183,10 +183,11 @@ const getBillingForTable = (req, res) => {
 // ── Billing: Bill the entire table (all current orders) ───────────────────────
 const generateTableBill = (req, res) => {
   const { tableId } = req.params;
+  const { payment_method } = req.body;
 
   try {
     db.transaction(() => {
-      db.prepare("UPDATE orders SET status = 'billed', updated_at = datetime('now') WHERE table_id = ? AND status != 'billed'").run(tableId);
+      db.prepare("UPDATE orders SET status = 'billed', updated_at = datetime('now'), payment_method = ? WHERE table_id = ? AND status != 'billed'").run(payment_method || 'Cash', tableId);
       db.prepare('UPDATE tables SET is_occupied = 0 WHERE id = ?').run(tableId);
     })();
 
@@ -195,6 +196,25 @@ const generateTableBill = (req, res) => {
     }
 
     res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+const clearOrderHistory = (req, res) => {
+  try {
+    db.prepare("DELETE FROM kot WHERE order_id IN (SELECT id FROM orders WHERE status = 'billed')").run();
+    db.prepare("DELETE FROM orders WHERE status = 'billed'").run();
+    res.json({ success: true, message: 'Order history cleared' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+const clearKotHistory = (req, res) => {
+  try {
+    db.prepare("DELETE FROM kot WHERE status = 'served'").run();
+    res.json({ success: true, message: 'KOT history cleared' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -210,5 +230,7 @@ module.exports = {
   requestBillByTable,
   getBillingForTable,
   generateTableBill,
+  clearOrderHistory,
+  clearKotHistory,
 };
 

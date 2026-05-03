@@ -1,5 +1,9 @@
-- [x] in admin dashboadr, if someone request for a bill, the  billing section of side bar menu should get a red dot type of thing.....like when we recive a notification in phone, the app which gets the notification it gets a red dot on it....like that 
-- [x] in kitchen display, if the item is required as regular do nothing, if item is required as jain, highlight the name of that dish in red colour, if it is required as half jain, highlight it in yellow colour
-- [x] Table 1, 2 & 5 doesnot have qr code, pls see to it
-- [x] admin should also have a page to place order for any table
-- [x] add a full menue to my system with images
+- [x] **Out of Stock UI:** Gray out/dim out-of-stock items and automatically sort them to the bottom of the list on both the Customer Menu Page and POS Screen.
+- [x] **Customization Flow:** Move the item quantity selector to the bottom of the customization modal (appearing after variant selection and special instructions).
+- [x] **Configurable Item Variations:** Expand the variant options (Regular, Jain, Half Jain, etc.) to apply to *all* dishes, not just vegetarian ones. Add controls in the Admin Dashboard to toggle specific variants on a per-item basis (e.g., enable 'Jain' for Biryani, but disable it for Mango Lassi).
+- [x] **History & Billing Updates:** Display the date/timestamp in the billing system. Add an admin feature to clear Order History and KOT History.....also give various sorting options in billing section.    
+- [x] **Payment Methods:** Add an option for the admin to select the payment method (Cash vs. Online) when generating the final bill.
+- [x] Predicted Peak Hours (Today) not working
+- [x] Analytics of Top 5 Dishes not working
+- [x] also give various sorting option in menu management section in admin dashboard...like sorting on the basis of price, category, etc.
+- [x] also give various sorting options in kot history & also kot numbering should restart from 1 after 4:00 am in the morning in ist 

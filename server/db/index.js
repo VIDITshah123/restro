@@ -25,9 +25,15 @@ const runMigrations = () => {
   // We'll rely on IF NOT EXISTS in our SQL
   for (const file of files) {
     if (file.endsWith('.sql')) {
-      const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf8');
-      db.exec(sql);
-      console.log(`Executed migration: ${file}`);
+      try {
+        const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf8');
+        db.exec(sql);
+        console.log(`Executed migration: ${file}`);
+      } catch (err) {
+        if (!err.message.includes('duplicate column name')) {
+          console.error(`Migration error in ${file}:`, err);
+        }
+      }
     }
   }
 };

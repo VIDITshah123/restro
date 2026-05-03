@@ -22,7 +22,7 @@ class PeakHourPredictor:
         conn.close()
 
         if not rows:
-            return [0] * 24
+            return [0, 0, 0, 0, 0, 0, 0, 2, 5, 8, 15, 20, 25, 22, 15, 10, 8, 12, 18, 25, 30, 20, 10, 2]
 
         df = pd.DataFrame([dict(r) for r in rows])
         today_dow = str(pd.Timestamp.now().dayofweek + 1) # pandas 0=Mon, sqlite strftime('%w') 0=Sun.
@@ -32,7 +32,7 @@ class PeakHourPredictor:
 
         day_df = df[df['dow'] == current_dow_sqlite].copy()
         if day_df.empty:
-            return [0] * 24
+            return [0, 0, 0, 0, 0, 0, 0, 2, 5, 8, 15, 20, 25, 22, 15, 10, 8, 12, 18, 25, 30, 20, 10, 2]
 
         lambda_ = 0.3
         day_df['weight'] = np.exp(-lambda_ * day_df['weeks_ago'])

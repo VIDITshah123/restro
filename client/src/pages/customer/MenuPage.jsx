@@ -44,7 +44,7 @@ const MenuPage = () => {
   const confirmAdd = () => {
     let notes = [];
     if (customOptions.selectedVariantName !== 'Base') notes.push(customOptions.selectedVariantName);
-    if (customizingItem.is_veg && customOptions.vegType !== 'Regular') notes.push(customOptions.vegType);
+    if (customOptions.vegType && customOptions.vegType !== 'Regular') notes.push(customOptions.vegType);
     if (customOptions.noMushroom) notes.push('Without Mushroom');
     if (customOptions.text) notes.push(customOptions.text);
     
@@ -125,6 +125,10 @@ const MenuPage = () => {
     if (isVegOnly && item.is_veg === 0) return false;
     if (search && !item.name.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
+  }).sort((a, b) => {
+    // Sort logic: available items first, out-of-stock items last
+    if (a.is_available === b.is_available) return 0;
+    return a.is_available ? -1 : 1;
   });
 
   return (
@@ -222,7 +226,7 @@ const MenuPage = () => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             key={item.id} 
-            className={`bg-white rounded-xl shadow-sm border p-4 flex gap-4 ${!item.is_available ? 'opacity-50' : ''}`}
+            className={`bg-white rounded-xl shadow-sm border p-4 flex gap-4 ${!item.is_available ? 'opacity-50 grayscale' : ''}`}
           >
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
@@ -243,9 +247,13 @@ const MenuPage = () => {
               <button 
                 disabled={!item.is_available}
                 onClick={() => handleAddClick(item)}
-                className="mt-2 bg-red-50 text-red-600 font-medium px-6 py-1.5 rounded-lg border border-red-200 shadow-sm"
+                className={`mt-2 font-medium px-6 py-1.5 rounded-lg border shadow-sm ${
+                  !item.is_available
+                    ? 'bg-gray-200 text-gray-500 border-gray-300'
+                    : 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100'
+                }`}
               >
-                ADD
+                {!item.is_available ? 'OUT OF STOCK' : 'ADD'}
               </button>
             </div>
           </motion.div>
@@ -265,27 +273,6 @@ const MenuPage = () => {
             </div>
             
             <div className="space-y-4 max-h-[60vh] overflow-y-auto pb-4">
-              {/* Quantity Selector */}
-              <div>
-                <h3 className="font-semibold mb-2">Quantity</h3>
-                <div className="flex items-center gap-3 bg-gray-50 rounded-lg px-4 py-2 border w-fit">
-                  <button 
-                    onClick={() => setCustomQty(q => Math.max(1, q - 1))} 
-                    className="p-1 hover:bg-gray-200 rounded transition-colors"
-                    disabled={customQty <= 1}
-                  >
-                    <Minus size={20} className={customQty <= 1 ? 'text-gray-300' : 'text-gray-700'} />
-                  </button>
-                  <span className="font-bold text-lg w-8 text-center">{customQty}</span>
-                  <button 
-                    onClick={() => setCustomQty(q => q + 1)} 
-                    className="p-1 hover:bg-gray-200 rounded transition-colors"
-                  >
-                    <Plus size={20} className="text-gray-700" />
-                  </button>
-                </div>
-              </div>
-
               {/* Price Variants from DB */}
               {customizingItem.variants && customizingItem.variants.length > 0 && (
                 <div>
@@ -315,20 +302,36 @@ const MenuPage = () => {
                 </div>
               )}
 
-              {/* Veg Type Options (Veg items only) */}
-              {customizingItem.is_veg && (
-                <div>
-                  <h3 className="font-semibold mb-2">Food Type</h3>
-                  <div className="space-y-2">
-                    {['Regular', 'Jain', 'Half Jain (No Onion & Garlic)'].map(opt => (
-                      <label key={opt} className="flex items-center gap-2 cursor-pointer p-2 border rounded-lg hover:bg-gray-50">
-                        <input type="radio" name="vegType" checked={customOptions.vegType === opt} onChange={() => setCustomOptions(p => ({ ...p, vegType: opt }))} className="accent-black" />
-                        <span className="text-sm font-medium">{opt}</span>
-                      </label>
-                    ))}
+              {/* Dynamic Food Type Options based on tags */}
+              {(() => {
+                let tags = [];
+                try {
+                  tags = typeof customizingItem.tags === 'string' ? JSON.parse(customizingItem.tags) : (customizingItem.tags || []);
+                } catch (e) {}
+                
+                const hasJain = tags.includes('Jain');
+                const hasHalfJain = tags.includes('Half Jain');
+                
+                if (!hasJain && !hasHalfJain) return null;
+
+                const options = ['Regular'];
+                if (hasJain) options.push('Jain');
+                if (hasHalfJain) options.push('Half Jain (No Onion & Garlic)');
+
+                return (
+                  <div>
+                    <h3 className="font-semibold mb-2">Food Type</h3>
+                    <div className="space-y-2">
+                      {options.map(opt => (
+                        <label key={opt} className="flex items-center gap-2 cursor-pointer p-2 border rounded-lg hover:bg-gray-50">
+                          <input type="radio" name="vegType" checked={customOptions.vegType === opt} onChange={() => setCustomOptions(p => ({ ...p, vegType: opt }))} className="accent-black" />
+                          <span className="text-sm font-medium">{opt}</span>
+                        </label>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* Mushroom checkbox */}
               {customizingItem.name.toLowerCase().includes('mushroom') && (
@@ -350,6 +353,27 @@ const MenuPage = () => {
                   onChange={(e) => setCustomOptions(p => ({ ...p, text: e.target.value }))}
                   className="w-full border rounded-lg p-2 text-sm focus:outline-none focus:ring-1 focus:ring-black"
                 ></textarea>
+              </div>
+
+              {/* Quantity Selector */}
+              <div>
+                <h3 className="font-semibold mb-2">Quantity</h3>
+                <div className="flex items-center gap-3 bg-gray-50 rounded-lg px-4 py-2 border w-fit">
+                  <button 
+                    onClick={() => setCustomQty(q => Math.max(1, q - 1))} 
+                    className="p-1 hover:bg-gray-200 rounded transition-colors"
+                    disabled={customQty <= 1}
+                  >
+                    <Minus size={20} className={customQty <= 1 ? 'text-gray-300' : 'text-gray-700'} />
+                  </button>
+                  <span className="font-bold text-lg w-8 text-center">{customQty}</span>
+                  <button 
+                    onClick={() => setCustomQty(q => q + 1)} 
+                    className="p-1 hover:bg-gray-200 rounded transition-colors"
+                  >
+                    <Plus size={20} className="text-gray-700" />
+                  </button>
+                </div>
               </div>
             </div>
 

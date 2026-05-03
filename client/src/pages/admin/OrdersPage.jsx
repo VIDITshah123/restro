@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../api';
-import { toIST } from '../../lib/utils';
+import { toIST, toISTFull } from '../../lib/utils';
 
 const STATUS_COLORS = {
   placed:    'bg-blue-100 text-blue-700',
@@ -93,9 +93,29 @@ const OrdersPage = () => {
     return () => clearInterval(interval);
   }, []);
 
+  const clearHistory = async () => {
+    if (!confirm('Are you sure you want to clear ALL billed order history? This cannot be undone.')) return;
+    try {
+      await api.delete('/orders/history/clear');
+      const res = await api.get('/orders');
+      setOrders(res.data.data);
+      alert('Order history cleared!');
+    } catch (err) {
+      alert('Error clearing history');
+    }
+  };
+
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">Orders</h1>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Orders History</h1>
+        <button 
+          onClick={clearHistory}
+          className="bg-red-50 text-red-600 border border-red-200 px-4 py-2 rounded-lg font-medium hover:bg-red-100"
+        >
+          Clear Billed History
+        </button>
+      </div>
 
       <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
         <table className="w-full text-left">
@@ -134,7 +154,7 @@ const OrdersPage = () => {
                   </span>
                 </td>
                 <td className="p-4 text-sm text-gray-500">
-                  {toIST(order.placed_at)}
+                  {toISTFull(order.placed_at)}
                 </td>
               </tr>
             ))}
