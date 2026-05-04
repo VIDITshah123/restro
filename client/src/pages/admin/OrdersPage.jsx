@@ -121,10 +121,11 @@ const OrdersPage = () => {
         <table className="w-full text-left">
           <thead className="bg-gray-50 border-b">
             <tr>
-              <th className="p-4 text-sm font-semibold text-gray-600">Order ID</th>
+              <th className="p-4 text-sm font-semibold text-gray-600">Order #</th>
               <th className="p-4 text-sm font-semibold text-gray-600">Table</th>
               <th className="p-4 text-sm font-semibold text-gray-600">Customer</th>
               <th className="p-4 text-sm font-semibold text-gray-600">Total</th>
+              <th className="p-4 text-sm font-semibold text-gray-600">Payment</th>
               <th className="p-4 text-sm font-semibold text-gray-600">Status</th>
               <th className="p-4 text-sm font-semibold text-gray-600">Time</th>
             </tr>
@@ -132,12 +133,15 @@ const OrdersPage = () => {
           <tbody className="divide-y">
             {orders.length === 0 && (
               <tr>
-                <td colSpan="6" className="p-10 text-center text-gray-400">No orders yet.</td>
+              <th colSpan="7" className="p-10 text-center text-gray-400">No orders yet.</th>
               </tr>
             )}
             {orders.map(order => (
               <tr key={order.id} className="hover:bg-gray-50">
-                <td className="p-4 font-bold text-gray-800">#{order.id}</td>
+                <td className="p-4 font-bold text-gray-800">
+                  {order.order_number ? `#${String(order.order_number).padStart(2, '0')}` : `#${order.id}`}
+                  <span className="text-xs text-gray-400 font-normal ml-2">(ID:{order.id})</span>
+                </td>
                 <td className="p-4">
                   <button 
                     onClick={() => setSelectedOrder(order)}
@@ -148,6 +152,7 @@ const OrdersPage = () => {
                 </td>
                 <td className="p-4 text-gray-700">{order.customer_name || 'Guest'}</td>
                 <td className="p-4 font-medium text-gray-800">₹{order.total_amount}</td>
+                <td className="p-4 font-semibold text-gray-600">{order.payment_method || '—'}</td>
                 <td className="p-4">
                   <span className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${STATUS_COLORS[order.status] || 'bg-gray-100 text-gray-600'}`}>
                     {order.status}

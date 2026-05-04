@@ -309,14 +309,9 @@ const MenuPage = () => {
                   tags = typeof customizingItem.tags === 'string' ? JSON.parse(customizingItem.tags) : (customizingItem.tags || []);
                 } catch (e) {}
                 
-                const hasJain = tags.includes('Jain');
-                const hasHalfJain = tags.includes('Half Jain');
+                if (!tags || tags.length === 0) return null;
                 
-                if (!hasJain && !hasHalfJain) return null;
-
-                const options = ['Regular'];
-                if (hasJain) options.push('Jain');
-                if (hasHalfJain) options.push('Half Jain (No Onion & Garlic)');
+                const options = ['Regular', ...tags];
 
                 return (
                   <div>

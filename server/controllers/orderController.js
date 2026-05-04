@@ -6,14 +6,17 @@ const createOrder = (req, res) => {
   // items: [{ menuItemId, quantity, specialNotes, price }]
 
   try {
-    const insertOrder = db.prepare('INSERT INTO orders (table_id, total_amount, customer_name) VALUES (?, ?, ?)');
+    const maxRow = db.prepare('SELECT MAX(order_number) as max_num FROM orders WHERE is_hidden = 0').get();
+    const orderNumber = (maxRow && maxRow.max_num) ? maxRow.max_num + 1 : 1;
+
+    const insertOrder = db.prepare('INSERT INTO orders (table_id, total_amount, customer_name, order_number) VALUES (?, ?, ?, ?)');
     const insertOrderItem = db.prepare('INSERT INTO order_items (order_id, menu_item_id, quantity, special_notes) VALUES (?, ?, ?, ?)');
     
     const total_amount = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
     let orderId;
     db.transaction(() => {
-      const orderInfo = insertOrder.run(tableId, total_amount, customerName || 'Guest');
+      const orderInfo = insertOrder.run(tableId, total_amount, customerName || 'Guest', orderNumber);
       orderId = orderInfo.lastInsertRowid;
       
       for (const item of items) {
@@ -59,6 +62,7 @@ const getOrders = (req, res) => {
     FROM orders o
     JOIN tables t ON o.table_id = t.id
     LEFT JOIN kot k ON o.id = k.order_id
+    WHERE o.is_hidden = 0
     ORDER BY o.placed_at DESC
   `).all();
   res.json({ success: true, data: orders });
@@ -203,8 +207,7 @@ const generateTableBill = (req, res) => {
 
 const clearOrderHistory = (req, res) => {
   try {
-    db.prepare("DELETE FROM kot WHERE order_id IN (SELECT id FROM orders WHERE status = 'billed')").run();
-    db.prepare("DELETE FROM orders WHERE status = 'billed'").run();
+    db.prepare("UPDATE orders SET is_hidden = 1 WHERE status = 'billed'").run();
     res.json({ success: true, message: 'Order history cleared' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

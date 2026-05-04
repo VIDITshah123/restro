@@ -13,6 +13,7 @@ const BillingPage = () => {
   const [notifications, setNotifications] = useState([]);
   const [paymentMethod, setPaymentMethod] = useState('Cash');
   const [sortOption, setSortOption] = useState('Table (Asc)');
+  const [billingHistory, setBillingHistory] = useState([]);
   
   const loadBillRequests = () => {
     try {
@@ -44,6 +45,7 @@ const BillingPage = () => {
 
   useEffect(() => {
     fetchTables();
+    fetchBillingHistory();
 
     const socket = io('http://localhost:3000/admin');
     socket.on('notification:bill_request', (data) => {
@@ -91,6 +93,15 @@ const BillingPage = () => {
     }
   };
 
+  const fetchBillingHistory = async () => {
+    try {
+      const res = await api.get('/orders');
+      setBillingHistory(res.data.data.filter(o => o.status === 'billed'));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const fetchBilling = async (tableId) => {
     setLoading(true);
     setSelectedTable(tableId);
@@ -118,9 +129,21 @@ const BillingPage = () => {
       setBilling(null);
       setSelectedTable(null);
       fetchTables();
+      fetchBillingHistory();
       alert('Bill generated! Table is now free.');
     } catch (err) {
       alert('Error generating bill');
+    }
+  };
+
+  const handleClearHistory = async () => {
+    if (!confirm('Clear all billing history?')) return;
+    try {
+      await api.delete('/orders/history/clear');
+      fetchBillingHistory();
+      alert('Billing history cleared!');
+    } catch (err) {
+      alert('Error clearing history');
     }
   };
 
@@ -132,8 +155,9 @@ const BillingPage = () => {
   }
 
   return (
-    <div className="p-6 flex gap-6 h-full min-h-screen">
-      <div className="w-64 shrink-0">
+    <div className="p-6 h-full min-h-screen flex flex-col gap-6">
+      <div className="flex gap-6 min-h-[60vh] flex-1">
+        <div className="w-64 shrink-0 flex flex-col">
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-2xl font-bold">Billing</h1>
           <select 
@@ -267,6 +291,55 @@ const BillingPage = () => {
             )}
           </div>
         )}
+      </div>
+      </div>
+
+      {/* Billing History Section */}
+      <div className="bg-white rounded-xl shadow-sm border overflow-hidden shrink-0">
+        <div className="p-6 border-b flex justify-between items-center bg-gray-50">
+          <div>
+            <h2 className="text-xl font-bold text-gray-800">Billing History</h2>
+            <p className="text-sm text-gray-500">Recently billed orders</p>
+          </div>
+          <button 
+            onClick={handleClearHistory} 
+            className="bg-red-50 text-red-600 px-4 py-2 rounded-lg font-bold border border-red-200 hover:bg-red-100 transition-colors"
+          >
+            Clear History
+          </button>
+        </div>
+        <table className="w-full text-left">
+          <thead className="bg-gray-50 border-b">
+            <tr>
+              <th className="p-4 text-sm font-semibold text-gray-600">Order #</th>
+              <th className="p-4 text-sm font-semibold text-gray-600">Table</th>
+              <th className="p-4 text-sm font-semibold text-gray-600">Customer</th>
+              <th className="p-4 text-sm font-semibold text-gray-600">Total</th>
+              <th className="p-4 text-sm font-semibold text-gray-600">Payment</th>
+              <th className="p-4 text-sm font-semibold text-gray-600">Time</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y">
+            {billingHistory.length === 0 && (
+              <tr>
+                <td colSpan="6" className="p-8 text-center text-gray-400">No billing history available.</td>
+              </tr>
+            )}
+            {billingHistory.map(order => (
+              <tr key={order.id} className="hover:bg-gray-50">
+                <td className="p-4 font-bold text-gray-800">
+                  {order.order_number ? `#${String(order.order_number).padStart(2, '0')}` : `#${order.id}`}
+                  <span className="text-xs text-gray-400 font-normal ml-2">(ID:{order.id})</span>
+                </td>
+                <td className="p-4 font-bold text-gray-700">{order.table_number || `Table ${order.table_id}`}</td>
+                <td className="p-4 text-gray-700">{order.customer_name || 'Guest'}</td>
+                <td className="p-4 font-medium text-gray-800">₹{order.total_amount}</td>
+                <td className="p-4 font-semibold text-gray-600">{order.payment_method || '—'}</td>
+                <td className="p-4 text-sm text-gray-500">{toISTFull(order.placed_at)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
       {/* Toast Notifications */}

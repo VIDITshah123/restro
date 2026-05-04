@@ -388,39 +388,20 @@ const MenuManagementPage = () => {
                 </label>
               </div>
 
-              {/* Tag options for Jain / Half Jain */}
+              {/* Customizable Tag Options */}
               <div className="pt-2 border-t mt-4">
-                <p className="text-sm font-medium mb-2">Available Food Types</p>
-                <div className="flex gap-4">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      checked={formData.tags.includes('Jain')} 
-                      onChange={(e) => {
-                        const tags = e.target.checked 
-                          ? [...formData.tags, 'Jain'] 
-                          : formData.tags.filter(t => t !== 'Jain');
-                        setFormData({...formData, tags});
-                      }} 
-                      className="accent-black" 
-                    />
-                    <span className="text-sm font-medium">Jain</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      checked={formData.tags.includes('Half Jain')} 
-                      onChange={(e) => {
-                        const tags = e.target.checked 
-                          ? [...formData.tags, 'Half Jain'] 
-                          : formData.tags.filter(t => t !== 'Half Jain');
-                        setFormData({...formData, tags});
-                      }} 
-                      className="accent-black" 
-                    />
-                    <span className="text-sm font-medium">Half Jain (No Onion/Garlic)</span>
-                  </label>
-                </div>
+                <label className="block text-sm font-medium mb-1">Available Food Types / Tags</label>
+                <input
+                  type="text"
+                  value={formData.tags.join(', ')}
+                  onChange={e => {
+                    const val = e.target.value;
+                    setFormData({...formData, tags: val.split(',').map(t => t.trim()).filter(Boolean)});
+                  }}
+                  placeholder="e.g. Jain, Vegan, Gluten-Free"
+                  className="w-full border rounded-lg p-2 text-sm"
+                />
+                <p className="text-xs text-gray-500 mt-1">Comma-separated values. These appear as options for the customer.</p>
               </div>
               
               <div className="flex justify-end gap-3 pt-4 mt-2 border-t">

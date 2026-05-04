@@ -1,0 +1,2 @@
+ALTER TABLE orders ADD COLUMN order_number INTEGER;
+ALTER TABLE orders ADD COLUMN is_hidden INTEGER DEFAULT 0;
