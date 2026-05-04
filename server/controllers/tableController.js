@@ -38,25 +38,29 @@ const deleteTable = (req, res) => {
   const { id } = req.params;
 
   try {
-    // Check if any orders reference this table
-    const linkedOrders = db.prepare('SELECT COUNT(*) as count FROM orders WHERE table_id = ?').get(id);
-    if (linkedOrders.count > 0) {
+    // Check if table is occupied
+    const table = db.prepare('SELECT is_occupied FROM tables WHERE id = ?').get(id);
+    if (table && table.is_occupied === 1) {
+      return res.status(409).json({ success: false, message: 'Cannot delete an occupied table.' });
+    }
+
+    // Check if any active (un-hidden) orders reference this table
+    const activeOrders = db.prepare('SELECT COUNT(*) as count FROM orders WHERE table_id = ? AND is_hidden = 0').get(id);
+    if (activeOrders.count > 0) {
       return res.status(409).json({
         success: false,
-        message: `Cannot delete — this table has ${linkedOrders.count} order(s) in history. Delete its orders first or keep the table.`
+        message: 'Cannot delete table. Please clear its orders from the Billing/Order History first.'
       });
     }
 
-    // Check if any KOTs reference this table
-    const linkedKOTs = db.prepare('SELECT COUNT(*) as count FROM kot WHERE table_id = ?').get(id);
-    if (linkedKOTs.count > 0) {
-      return res.status(409).json({
-        success: false,
-        message: `Cannot delete — this table has KOT records linked to it.`
-      });
-    }
+    // Safe to delete. We must cascade delete the hidden orders and KOTs to respect SQLite foreign keys.
+    db.transaction(() => {
+      db.prepare('DELETE FROM kot WHERE table_id = ?').run(id);
+      db.prepare('DELETE FROM order_items WHERE order_id IN (SELECT id FROM orders WHERE table_id = ?)').run(id);
+      db.prepare('DELETE FROM orders WHERE table_id = ?').run(id);
+      db.prepare('DELETE FROM tables WHERE id = ?').run(id);
+    })();
 
-    db.prepare('DELETE FROM tables WHERE id = ?').run(id);
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
