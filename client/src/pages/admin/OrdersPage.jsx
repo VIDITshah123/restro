@@ -78,6 +78,14 @@ const OrderDetailModal = ({ order, onClose }) => {
 const OrdersPage = () => {
   const [orders, setOrders] = useState([]);
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [reportType, setReportType] = useState('Order Wise');
+  const [dishReport, setDishReport] = useState([]);
+
+  useEffect(() => {
+    if (reportType === 'Dish Wise') {
+      api.get('/analytics/top-dishes?limit=1000').then(res => setDishReport(res.data.data)).catch(console.error);
+    }
+  }, [reportType]);
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -105,66 +113,197 @@ const OrdersPage = () => {
     }
   };
 
+  const getTableReport = () => {
+    const data = orders.reduce((acc, o) => {
+      const t = o.table_number || `Table ${o.table_id}`;
+      if (!acc[t]) acc[t] = { orders: 0, revenue: 0 };
+      acc[t].orders++;
+      acc[t].revenue += o.total_amount;
+      return acc;
+    }, {});
+    return Object.entries(data).map(([name, stats]) => ({ name, ...stats })).sort((a,b) => b.revenue - a.revenue);
+  };
+
+  const getPaymentReport = () => {
+    const data = orders.reduce((acc, o) => {
+      const p = o.payment_method || 'Unpaid';
+      if (!acc[p]) acc[p] = { orders: 0, revenue: 0 };
+      acc[p].orders++;
+      acc[p].revenue += o.total_amount;
+      return acc;
+    }, {});
+    return Object.entries(data).map(([name, stats]) => ({ name, ...stats })).sort((a,b) => b.revenue - a.revenue);
+  };
+
+  const getTimeReport = () => {
+    const data = orders.reduce((acc, o) => {
+      const hour = new Date(o.placed_at).getHours();
+      const timeStr = `${String(hour).padStart(2, '0')}:00 - ${String(hour + 1).padStart(2, '0')}:00`;
+      if (!acc[timeStr]) acc[timeStr] = { orders: 0, revenue: 0, hour };
+      acc[timeStr].orders++;
+      acc[timeStr].revenue += o.total_amount;
+      return acc;
+    }, {});
+    return Object.values(data).sort((a,b) => a.hour - b.hour);
+  };
+
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Orders History</h1>
-        <button 
-          onClick={clearHistory}
-          className="bg-red-50 text-red-600 border border-red-200 px-4 py-2 rounded-lg font-medium hover:bg-red-100"
-        >
-          Clear Billed History
-        </button>
+        <h1 className="text-2xl font-bold">Orders History & Reports</h1>
+        <div className="flex gap-4">
+          <select 
+            value={reportType}
+            onChange={e => setReportType(e.target.value)}
+            className="border-2 border-gray-200 rounded-lg px-4 py-2 font-bold outline-none"
+          >
+            <option>Order Wise</option>
+            <option>Table Wise</option>
+            <option>Dish Wise</option>
+            <option>Payment Wise</option>
+            <option>Time Wise</option>
+          </select>
+          <button 
+            onClick={clearHistory}
+            className="bg-red-50 text-red-600 border border-red-200 px-4 py-2 rounded-lg font-medium hover:bg-red-100"
+          >
+            Clear Billed History
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
-        <table className="w-full text-left">
-          <thead className="bg-gray-50 border-b">
-            <tr>
-              <th className="p-4 text-sm font-semibold text-gray-600">Order #</th>
-              <th className="p-4 text-sm font-semibold text-gray-600">Table</th>
-              <th className="p-4 text-sm font-semibold text-gray-600">Customer</th>
-              <th className="p-4 text-sm font-semibold text-gray-600">Total</th>
-              <th className="p-4 text-sm font-semibold text-gray-600">Payment</th>
-              <th className="p-4 text-sm font-semibold text-gray-600">Status</th>
-              <th className="p-4 text-sm font-semibold text-gray-600">Time</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y">
-            {orders.length === 0 && (
+        {reportType === 'Order Wise' && (
+          <table className="w-full text-left">
+            <thead className="bg-gray-50 border-b">
               <tr>
-              <th colSpan="7" className="p-10 text-center text-gray-400">No orders yet.</th>
+                <th className="p-4 text-sm font-semibold text-gray-600">Order #</th>
+                <th className="p-4 text-sm font-semibold text-gray-600">Table</th>
+                <th className="p-4 text-sm font-semibold text-gray-600">Customer</th>
+                <th className="p-4 text-sm font-semibold text-gray-600">Total</th>
+                <th className="p-4 text-sm font-semibold text-gray-600">Payment</th>
+                <th className="p-4 text-sm font-semibold text-gray-600">Status</th>
+                <th className="p-4 text-sm font-semibold text-gray-600">Time</th>
               </tr>
-            )}
-            {orders.map(order => (
-              <tr key={order.id} className="hover:bg-gray-50">
-                <td className="p-4 font-bold text-gray-800">
-                  {order.order_number ? `#${String(order.order_number).padStart(2, '0')}` : `#${order.id}`}
-                  <span className="text-xs text-gray-400 font-normal ml-2">(ID:{order.id})</span>
-                </td>
-                <td className="p-4">
-                  <button 
-                    onClick={() => setSelectedOrder(order)}
-                    className="text-blue-600 hover:text-blue-800 font-semibold underline"
-                  >
-                    {order.table_number}
-                  </button>
-                </td>
-                <td className="p-4 text-gray-700">{order.customer_name || 'Guest'}</td>
-                <td className="p-4 font-medium text-gray-800">₹{order.total_amount}</td>
-                <td className="p-4 font-semibold text-gray-600">{order.payment_method || '—'}</td>
-                <td className="p-4">
-                  <span className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${STATUS_COLORS[order.status] || 'bg-gray-100 text-gray-600'}`}>
-                    {order.status}
-                  </span>
-                </td>
-                <td className="p-4 text-sm text-gray-500">
-                  {toISTFull(order.placed_at)}
-                </td>
+            </thead>
+            <tbody className="divide-y">
+              {orders.length === 0 && (
+                <tr>
+                <th colSpan="7" className="p-10 text-center text-gray-400">No orders yet.</th>
+                </tr>
+              )}
+              {orders.map(order => (
+                <tr key={order.id} className="hover:bg-gray-50">
+                  <td className="p-4 font-bold text-gray-800">
+                    {order.order_number ? `#${String(order.order_number).padStart(2, '0')}` : `#${order.id}`}
+                    <span className="text-xs text-gray-400 font-normal ml-2">(ID:{order.id})</span>
+                  </td>
+                  <td className="p-4">
+                    <button 
+                      onClick={() => setSelectedOrder(order)}
+                      className="text-blue-600 hover:text-blue-800 font-semibold underline"
+                    >
+                      {order.table_number || `Table ${order.table_id}`}
+                    </button>
+                  </td>
+                  <td className="p-4 text-gray-700">{order.customer_name || 'Guest'}</td>
+                  <td className="p-4 font-medium text-gray-800">₹{order.total_amount}</td>
+                  <td className="p-4 font-semibold text-gray-600">{order.payment_method || '—'}</td>
+                  <td className="p-4">
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${STATUS_COLORS[order.status] || 'bg-gray-100 text-gray-600'}`}>
+                      {order.status}
+                    </span>
+                  </td>
+                  <td className="p-4 text-sm text-gray-500">
+                    {toISTFull(order.placed_at)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+
+        {reportType === 'Table Wise' && (
+          <table className="w-full text-left">
+            <thead className="bg-gray-50 border-b">
+              <tr>
+                <th className="p-4 text-sm font-semibold text-gray-600">Table Name</th>
+                <th className="p-4 text-sm font-semibold text-gray-600">Total Orders</th>
+                <th className="p-4 text-sm font-semibold text-gray-600">Total Revenue</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y">
+              {getTableReport().map(row => (
+                <tr key={row.name} className="hover:bg-gray-50">
+                  <td className="p-4 font-bold text-gray-800">{row.name}</td>
+                  <td className="p-4 text-gray-700">{row.orders}</td>
+                  <td className="p-4 font-medium text-green-700">₹{row.revenue.toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+
+        {reportType === 'Payment Wise' && (
+          <table className="w-full text-left">
+            <thead className="bg-gray-50 border-b">
+              <tr>
+                <th className="p-4 text-sm font-semibold text-gray-600">Payment Method</th>
+                <th className="p-4 text-sm font-semibold text-gray-600">Total Orders</th>
+                <th className="p-4 text-sm font-semibold text-gray-600">Total Revenue</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {getPaymentReport().map(row => (
+                <tr key={row.name} className="hover:bg-gray-50">
+                  <td className="p-4 font-bold text-gray-800">{row.name}</td>
+                  <td className="p-4 text-gray-700">{row.orders}</td>
+                  <td className="p-4 font-medium text-green-700">₹{row.revenue.toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+
+        {reportType === 'Time Wise' && (
+          <table className="w-full text-left">
+            <thead className="bg-gray-50 border-b">
+              <tr>
+                <th className="p-4 text-sm font-semibold text-gray-600">Time Slot</th>
+                <th className="p-4 text-sm font-semibold text-gray-600">Total Orders</th>
+                <th className="p-4 text-sm font-semibold text-gray-600">Total Revenue</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {getTimeReport().map(row => (
+                <tr key={row.hour} className="hover:bg-gray-50">
+                  <td className="p-4 font-bold text-gray-800">{`${String(row.hour).padStart(2, '0')}:00 - ${String(row.hour + 1).padStart(2, '0')}:00`}</td>
+                  <td className="p-4 text-gray-700">{row.orders}</td>
+                  <td className="p-4 font-medium text-green-700">₹{row.revenue.toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+
+        {reportType === 'Dish Wise' && (
+          <table className="w-full text-left">
+            <thead className="bg-gray-50 border-b">
+              <tr>
+                <th className="p-4 text-sm font-semibold text-gray-600">Dish Name</th>
+                <th className="p-4 text-sm font-semibold text-gray-600">Total Quantity Sold</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {dishReport.map(row => (
+                <tr key={row.name} className="hover:bg-gray-50">
+                  <td className="p-4 font-bold text-gray-800">{row.name}</td>
+                  <td className="p-4 font-medium text-gray-700">{row.total_sold} units</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
       {selectedOrder && (

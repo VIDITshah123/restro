@@ -1,9 +1,12 @@
-- [x] **Out of Stock UI:** Gray out/dim out-of-stock items and automatically sort them to the bottom of the list on both the Customer Menu Page and POS Screen.
-- [x] **Customization Flow:** Move the item quantity selector to the bottom of the customization modal (appearing after variant selection and special instructions).
-- [x] **Configurable Item Variations:** Expand the variant options (Regular, Jain, Half Jain, etc.) to apply to *all* dishes, not just vegetarian ones. Add controls in the Admin Dashboard to toggle specific variants on a per-item basis (e.g., enable 'Jain' for Biryani, but disable it for Mango Lassi).
-- [x] **History & Billing Updates:** Display the date/timestamp in the billing system. Add an admin feature to clear Order History and KOT History.....also give various sorting options in billing section.    
-- [x] **Payment Methods:** Add an option for the admin to select the payment method (Cash vs. Online) when generating the final bill.
-- [x] Predicted Peak Hours (Today) not working
-- [x] Analytics of Top 5 Dishes not working
-- [x] also give various sorting option in menu management section in admin dashboard...like sorting on the basis of price, category, etc.
-- [x] also give various sorting options in kot history & also kot numbering should restart from 1 after 4:00 am in the morning in ist 
+- [x] when i clear the billing history, it should not show Analytics of Top 5 Dishes
+- [x] i think billing history section is not needed as order history is already there which shows the better data, but in order history give various report like:
+    -table wise report
+    -dish wise report   
+    -payment wise report
+    -time wise report
+    -order wise report
+
+- [x] also enhance Predicted Peak Hours system
+
+
+

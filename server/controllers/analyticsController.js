@@ -9,7 +9,7 @@ const getTodayAnalytics = (req, res) => {
       COUNT(*) as totalOrders,
       COALESCE(SUM(total_amount), 0) as revenue
     FROM orders
-    WHERE placed_at >= ?
+    WHERE placed_at >= ? AND is_hidden = 0
   `).get(startOfDay);
   
   stats.avgOrderValue = stats.totalOrders > 0 ? (stats.revenue / stats.totalOrders).toFixed(2) : 0;
@@ -22,7 +22,7 @@ const getRevenue = (req, res) => {
   const data = db.prepare(`
     SELECT date(placed_at) as date, SUM(total_amount) as revenue
     FROM orders
-    WHERE placed_at >= datetime('now', '-7 days')
+    WHERE placed_at >= datetime('now', '-7 days') AND is_hidden = 0
     GROUP BY date(placed_at)
     ORDER BY date ASC
   `).all();
@@ -36,6 +36,7 @@ const getTopDishes = (req, res) => {
     FROM order_items oi
     JOIN menu_items m ON oi.menu_item_id = m.id
     JOIN orders o ON oi.order_id = o.id
+    WHERE o.is_hidden = 0
     GROUP BY m.id
     ORDER BY total_sold DESC
     LIMIT ?
