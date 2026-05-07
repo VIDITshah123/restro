@@ -21,7 +21,7 @@ const MenuPage = () => {
   const [recommendations, setRecommendations] = useState([]);
 
   const [customizingItem, setCustomizingItem] = useState(null);
-  const [customOptions, setCustomOptions] = useState({ selectedVariantId: null, selectedVariantName: 'Base', selectedVariantPrice: null, vegType: 'Regular', noMushroom: false, text: '' });
+  const [customOptions, setCustomOptions] = useState({ selectedVariants: [], vegType: 'Regular', noMushroom: false, text: '' });
   const [customQty, setCustomQty] = useState(1);
   const [showBillPopup, setShowBillPopup] = useState(false);
   const [billRequested, setBillRequested] = useState(false);
@@ -31,9 +31,7 @@ const MenuPage = () => {
   const handleAddClick = (item) => {
     setCustomizingItem(item);
     setCustomOptions({ 
-      selectedVariantId: null, 
-      selectedVariantName: 'Base', 
-      selectedVariantPrice: null, 
+      selectedVariants: [],
       vegType: 'Regular', 
       noMushroom: false, 
       text: '' 
@@ -43,19 +41,19 @@ const MenuPage = () => {
 
   const confirmAdd = () => {
     let notes = [];
-    if (customOptions.selectedVariantName !== 'Base') notes.push(customOptions.selectedVariantName);
+    if (customOptions.selectedVariants.length > 0) {
+      notes.push(customOptions.selectedVariants.map(v => v.name).join(' + '));
+    }
     if (customOptions.vegType && customOptions.vegType !== 'Regular') notes.push(customOptions.vegType);
     if (customOptions.noMushroom) notes.push('Without Mushroom');
     if (customOptions.text) notes.push(customOptions.text);
     
-    const effectivePrice = customOptions.selectedVariantPrice ?? customizingItem.price;
-    const effectiveName = customOptions.selectedVariantName !== 'Base'
-      ? `${customizingItem.name} (${customOptions.selectedVariantName})`
-      : customizingItem.name;
+    const addonsPrice = customOptions.selectedVariants.reduce((sum, v) => sum + v.price, 0);
+    const effectivePrice = customizingItem.price + addonsPrice;
 
     addItem({ 
       menuItemId: customizingItem.id, 
-      name: effectiveName, 
+      name: customizingItem.name, 
       price: effectivePrice, 
       is_veg: customizingItem.is_veg,
       specialNotes: notes.join(', '),
@@ -273,31 +271,40 @@ const MenuPage = () => {
             </div>
             
             <div className="space-y-4 max-h-[60vh] overflow-y-auto pb-4">
-              {/* Price Variants from DB */}
+              {/* Add-ons from DB */}
               {customizingItem.variants && customizingItem.variants.length > 0 && (
                 <div>
-                  <h3 className="font-semibold mb-2">Choose Variant</h3>
+                  <h3 className="font-semibold mb-2">Add-ons</h3>
                   <div className="space-y-2">
-                    <label className="flex items-center justify-between p-2 border rounded-lg cursor-pointer hover:bg-gray-50">
-                      <div className="flex items-center gap-2">
-                        <input type="radio" name="dbVariant" checked={customOptions.selectedVariantId === null}
-                          onChange={() => setCustomOptions(p => ({ ...p, selectedVariantId: null, selectedVariantName: 'Base', selectedVariantPrice: null }))}
-                          className="accent-black" />
-                        <span className="text-sm font-medium">Base</span>
-                      </div>
-                      <span className="text-sm font-bold">₹{customizingItem.price}</span>
-                    </label>
-                    {customizingItem.variants.map(v => (
-                      <label key={v.id} className="flex items-center justify-between p-2 border rounded-lg cursor-pointer hover:bg-gray-50">
-                        <div className="flex items-center gap-2">
-                          <input type="radio" name="dbVariant" checked={customOptions.selectedVariantId === v.id}
-                            onChange={() => setCustomOptions(p => ({ ...p, selectedVariantId: v.id, selectedVariantName: v.name, selectedVariantPrice: v.price }))}
-                            className="accent-black" />
-                          <span className="text-sm font-medium">{v.name}</span>
-                        </div>
-                        {v.price > 0 && <span className="text-sm font-bold">₹{v.price}</span>}
-                      </label>
-                    ))}
+                    {customizingItem.variants.map(v => {
+                      const isSelected = customOptions.selectedVariants.some(sv => sv.id === v.id);
+                      return (
+                        <label key={v.id} className="flex items-center justify-between p-2 border rounded-lg cursor-pointer hover:bg-gray-50">
+                          <div className="flex items-center gap-2">
+                            <input 
+                              type="checkbox" 
+                              checked={isSelected}
+                              onChange={() => {
+                                setCustomOptions(p => {
+                                  const exists = p.selectedVariants.some(sv => sv.id === v.id);
+                                  return { 
+                                    ...p, 
+                                    selectedVariants: exists ? p.selectedVariants.filter(sv => sv.id !== v.id) : [...p.selectedVariants, v] 
+                                  };
+                                });
+                              }}
+                              className="accent-black w-4 h-4 rounded" 
+                            />
+                            <span className="text-sm font-medium">{v.name}</span>
+                          </div>
+                          {v.price !== 0 && (
+                            <span className="text-sm font-bold text-gray-600">
+                              {v.price > 0 ? `+₹${v.price}` : `-₹${Math.abs(v.price)}`}
+                            </span>
+                          )}
+                        </label>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -373,7 +380,11 @@ const MenuPage = () => {
             </div>
 
             <button onClick={confirmAdd} className="w-full bg-black text-white font-bold py-3 rounded-xl mt-2">
-              Add to Cart — ₹{((customOptions.selectedVariantPrice ?? customizingItem.price) * customQty).toFixed(0)}
+              {(() => {
+                const addonsPrice = customOptions.selectedVariants.reduce((sum, v) => sum + v.price, 0);
+                const effectivePrice = customizingItem.price + addonsPrice;
+                return `Add to Cart — ₹${(effectivePrice * customQty).toFixed(0)}`;
+              })()}
             </button>
           </div>
         </div>

@@ -49,6 +49,7 @@ CREATE TABLE IF NOT EXISTS order_items (
   order_id       INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
   menu_item_id   INTEGER NOT NULL REFERENCES menu_items(id),
   quantity       INTEGER NOT NULL DEFAULT 1,
+  price          REAL    NOT NULL DEFAULT 0,
   special_notes  TEXT    DEFAULT ''
 );
 

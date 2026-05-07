@@ -10,7 +10,7 @@ const createOrder = (req, res) => {
     const orderNumber = (maxRow && maxRow.max_num) ? maxRow.max_num + 1 : 1;
 
     const insertOrder = db.prepare('INSERT INTO orders (table_id, total_amount, customer_name, order_number) VALUES (?, ?, ?, ?)');
-    const insertOrderItem = db.prepare('INSERT INTO order_items (order_id, menu_item_id, quantity, special_notes) VALUES (?, ?, ?, ?)');
+    const insertOrderItem = db.prepare('INSERT INTO order_items (order_id, menu_item_id, quantity, price, special_notes) VALUES (?, ?, ?, ?, ?)');
     
     const total_amount = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
@@ -20,7 +20,7 @@ const createOrder = (req, res) => {
       orderId = orderInfo.lastInsertRowid;
       
       for (const item of items) {
-        insertOrderItem.run(orderId, item.menuItemId, item.quantity, item.specialNotes || '');
+        insertOrderItem.run(orderId, item.menuItemId, item.quantity, item.price, item.specialNotes || '');
       }
 
       // Generate KOT
@@ -74,7 +74,7 @@ const getOrderById = (req, res) => {
   if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
   
   order.items = db.prepare(`
-    SELECT oi.*, m.name, m.price, m.is_veg 
+    SELECT oi.*, m.name, m.is_veg 
     FROM order_items oi 
     JOIN menu_items m ON oi.menu_item_id = m.id 
     WHERE oi.order_id = ?
@@ -173,7 +173,7 @@ const getBillingForTable = (req, res) => {
   // Attach items to each order
   for (const order of orders) {
     order.items = db.prepare(`
-      SELECT oi.*, m.name, m.price, m.is_veg 
+      SELECT oi.*, m.name, m.is_veg 
       FROM order_items oi 
       JOIN menu_items m ON oi.menu_item_id = m.id 
       WHERE oi.order_id = ?

@@ -103,13 +103,6 @@ const CartPage = () => {
                 <button onClick={() => updateQuantity(item.menuItemId, 1, item.specialNotes)} className="p-1"><Plus size={16}/></button>
               </div>
             </div>
-            <input 
-              type="text" 
-              placeholder="Add cooking instructions (e.g. Less spicy, Jain)" 
-              value={item.specialNotes || ''}
-              onChange={(e) => updateNotes(item.menuItemId, e.target.value, item.specialNotes)}
-              className="w-full mt-3 text-sm p-2 border rounded-md bg-gray-50"
-            />
           </div>
         ))}
 
