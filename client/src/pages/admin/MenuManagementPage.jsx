@@ -6,6 +6,7 @@ const MenuManagementPage = () => {
   const [menu, setMenu] = useState([]);
   const [categories, setCategories] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [variantPanelItem, setVariantPanelItem] = useState(null);
   const [variants, setVariants] = useState([]);
@@ -16,12 +17,14 @@ const MenuManagementPage = () => {
     name: '',
     description: '',
     price: '',
+    cost_price: '',
     category: '',
     image_url: '',
     is_veg: 1,
     is_available: 1,
     tags: []
   });
+  const [tagInput, setTagInput] = useState('');
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -51,6 +54,21 @@ const MenuManagementPage = () => {
     }
   };
 
+  const handleAddTag = (e) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      const newTag = tagInput.trim().replace(',', '');
+      if (newTag && !formData.tags.includes(newTag)) {
+        setFormData(prev => ({ ...prev, tags: [...prev.tags, newTag] }));
+      }
+      setTagInput('');
+    }
+  };
+
+  const removeTag = (tagToRemove) => {
+    setFormData(prev => ({ ...prev, tags: prev.tags.filter(t => t !== tagToRemove) }));
+  };
+
   const handleOpenModal = (item = null) => {
     if (item) {
       setEditingItem(item);
@@ -58,6 +76,7 @@ const MenuManagementPage = () => {
         name: item.name,
         description: item.description || '',
         price: item.price,
+        cost_price: item.cost_price || '',
         category: item.category,
         image_url: item.image_url || '',
         is_veg: item.is_veg,
@@ -68,11 +87,12 @@ const MenuManagementPage = () => {
     } else {
       setEditingItem(null);
       setFormData({
-        name: '', description: '', price: '', category: '', image_url: '', is_veg: 1, is_available: 1, tags: []
+        name: '', description: '', price: '', cost_price: '', category: '', image_url: '', is_veg: 1, is_available: 1, tags: []
       });
       setImagePreview(null);
     }
     setImageFile(null);
+    setTagInput('');
     setIsModalOpen(true);
   };
 
@@ -181,8 +201,31 @@ const MenuManagementPage = () => {
     if (sortOption === 'Price (High to Low)') return b.price - a.price;
     if (sortOption === 'Category (A-Z)') return a.category.localeCompare(b.category);
     if (sortOption === 'Name (A-Z)') return a.name.localeCompare(b.name);
+    if (sortOption === 'Type (Veg First)') return b.is_veg - a.is_veg;
+    if (sortOption === 'Type (Non-Veg First)') return a.is_veg - b.is_veg;
     return 0;
   });
+
+  const moveCategory = (index, direction) => {
+    const newCats = [...categories];
+    if (direction === 'up' && index > 0) {
+      [newCats[index - 1], newCats[index]] = [newCats[index], newCats[index - 1]];
+      setCategories(newCats);
+    } else if (direction === 'down' && index < newCats.length - 1) {
+      [newCats[index + 1], newCats[index]] = [newCats[index], newCats[index + 1]];
+      setCategories(newCats);
+    }
+  };
+
+  const saveCategoryOrder = async () => {
+    try {
+      await api.post('/menu/categories/order', { categories });
+      setIsCategoryModalOpen(false);
+      fetchMenu();
+    } catch (err) {
+      alert('Error saving category order');
+    }
+  };
 
   return (
     <div className="p-6">
@@ -199,7 +242,12 @@ const MenuManagementPage = () => {
             <option>Category (A-Z)</option>
             <option>Price (Low to High)</option>
             <option>Price (High to Low)</option>
+            <option>Type (Veg First)</option>
+            <option>Type (Non-Veg First)</option>
           </select>
+          <button onClick={() => setIsCategoryModalOpen(true)} className="border border-gray-300 bg-white text-gray-700 px-4 py-2 rounded-lg font-medium">
+            Manage Categories
+          </button>
           <button onClick={() => handleOpenModal()} className="bg-black text-white px-4 py-2 rounded-lg font-medium">
             + Add New Item
           </button>
@@ -313,10 +361,14 @@ const MenuManagementPage = () => {
                 <label className="block text-sm font-medium mb-1">Name</label>
                 <input required type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full border rounded-lg p-2" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">Price (₹)</label>
+                  <label className="block text-sm font-medium mb-1">Selling Price (₹)</label>
                   <input required type="number" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} className="w-full border rounded-lg p-2" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Cost Price (₹)</label>
+                  <input type="number" value={formData.cost_price} onChange={e => setFormData({...formData, cost_price: e.target.value})} className="w-full border rounded-lg p-2" placeholder="Optional" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">Category</label>
@@ -393,17 +445,24 @@ const MenuManagementPage = () => {
               {/* Customizable Tag Options */}
               <div className="pt-2 border-t mt-4">
                 <label className="block text-sm font-medium mb-1">Available Food Types / Tags</label>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {formData.tags.map((tag, i) => (
+                    <span key={i} className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded text-sm font-medium">
+                      {tag}
+                      <button type="button" onClick={() => removeTag(tag)} className="text-gray-500 hover:text-red-500 rounded-full hover:bg-gray-200 p-0.5">
+                        <X size={12} />
+                      </button>
+                    </span>
+                  ))}
+                </div>
                 <input
                   type="text"
-                  value={formData.tags.join(', ')}
-                  onChange={e => {
-                    const val = e.target.value;
-                    setFormData({...formData, tags: val.split(',').map(t => t.trim()).filter(Boolean)});
-                  }}
-                  placeholder="e.g. Jain, Vegan, Gluten-Free"
+                  value={tagInput}
+                  onChange={e => setTagInput(e.target.value)}
+                  onKeyDown={handleAddTag}
+                  placeholder="Type a tag and press Enter (e.g. Jain, Vegan)"
                   className="w-full border rounded-lg p-2 text-sm"
                 />
-                <p className="text-xs text-gray-500 mt-1">Comma-separated values. These appear as options for the customer.</p>
               </div>
               
               <div className="flex justify-end gap-3 pt-4 mt-2 border-t">
@@ -411,6 +470,42 @@ const MenuManagementPage = () => {
                 <button type="submit" className="px-4 py-2 bg-black text-white rounded-lg font-medium">Save Item</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {isCategoryModalOpen && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-lg max-w-sm w-full p-6">
+            <h2 className="text-xl font-bold mb-4">Reorder Categories</h2>
+            <p className="text-sm text-gray-500 mb-4">Categories appear on the customer app in this order.</p>
+            <div className="space-y-2 mb-6 max-h-64 overflow-y-auto">
+              {categories.map((cat, i) => (
+                <div key={cat} className="flex justify-between items-center p-3 border rounded-lg bg-gray-50">
+                  <span className="font-medium">{cat}</span>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => moveCategory(i, 'up')} 
+                      disabled={i === 0}
+                      className="p-1 border rounded bg-white disabled:opacity-30"
+                    >
+                      ↑
+                    </button>
+                    <button 
+                      onClick={() => moveCategory(i, 'down')} 
+                      disabled={i === categories.length - 1}
+                      className="p-1 border rounded bg-white disabled:opacity-30"
+                    >
+                      ↓
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-end gap-3 border-t pt-4">
+              <button onClick={() => setIsCategoryModalOpen(false)} className="px-4 py-2 border rounded-lg font-medium">Cancel</button>
+              <button onClick={saveCategoryOrder} className="px-4 py-2 bg-black text-white rounded-lg font-medium">Save Order</button>
+            </div>
           </div>
         </div>
       )}

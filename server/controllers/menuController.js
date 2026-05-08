@@ -6,18 +6,40 @@ const getMenu = (req, res) => {
 };
 
 const getCategories = (req, res) => {
-  const categories = db.prepare('SELECT DISTINCT category FROM menu_items').all().map(r => r.category);
+  const categories = db.prepare(`
+    SELECT DISTINCT m.category as name, COALESCE(c.sort_order, 999) as sort_order 
+    FROM menu_items m 
+    LEFT JOIN categories c ON m.category = c.name 
+    ORDER BY sort_order ASC, m.category ASC
+  `).all().map(r => r.name);
   res.json({ success: true, data: categories });
 };
 
-const createMenuItem = (req, res) => {
-  const { name, description, price, category, image_url, is_veg, tags, is_available } = req.body;
+const updateCategoryOrder = (req, res) => {
+  const { categories } = req.body;
   const insert = db.prepare(`
-    INSERT INTO menu_items (name, description, price, category, image_url, is_veg, tags, is_available)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO categories (name, sort_order) 
+    VALUES (?, ?)
+    ON CONFLICT(name) DO UPDATE SET sort_order=excluded.sort_order
+  `);
+  
+  db.transaction(() => {
+    categories.forEach((name, index) => {
+      insert.run(name, index);
+    });
+  })();
+  
+  res.json({ success: true });
+};
+
+const createMenuItem = (req, res) => {
+  const { name, description, price, cost_price, category, image_url, is_veg, tags, is_available } = req.body;
+  const insert = db.prepare(`
+    INSERT INTO menu_items (name, description, price, cost_price, category, image_url, is_veg, tags, is_available)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
   const info = insert.run(
-    name, description, price, category, image_url, 
+    name, description, price, cost_price || 0, category, image_url, 
     is_veg !== undefined ? is_veg : 1, 
     tags || '[]', 
     is_available !== undefined ? is_available : 1
@@ -27,13 +49,13 @@ const createMenuItem = (req, res) => {
 
 const updateMenuItem = (req, res) => {
   const { id } = req.params;
-  const { name, description, price, category, image_url, is_veg, tags, is_available } = req.body;
+  const { name, description, price, cost_price, category, image_url, is_veg, tags, is_available } = req.body;
   const update = db.prepare(`
     UPDATE menu_items 
-    SET name=?, description=?, price=?, category=?, image_url=?, is_veg=?, tags=?, is_available=?, updated_at=datetime('now')
+    SET name=?, description=?, price=?, cost_price=?, category=?, image_url=?, is_veg=?, tags=?, is_available=?, updated_at=datetime('now')
     WHERE id=?
   `);
-  update.run(name, description, price, category, image_url, is_veg, tags, is_available, id);
+  update.run(name, description, price, cost_price || 0, category, image_url, is_veg, tags, is_available, id);
   res.json({ success: true });
 };
 
@@ -59,6 +81,7 @@ const toggleAvailability = (req, res) => {
 module.exports = {
   getMenu,
   getCategories,
+  updateCategoryOrder,
   createMenuItem,
   updateMenuItem,
   deleteMenuItem,

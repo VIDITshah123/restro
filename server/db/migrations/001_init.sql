@@ -14,6 +14,15 @@ CREATE TABLE IF NOT EXISTS tables (
 );
 
 -- ─────────────────────────────────────────
+-- Categories
+-- ─────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS categories (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  name         TEXT    UNIQUE NOT NULL,
+  sort_order   INTEGER DEFAULT 0
+);
+
+-- ─────────────────────────────────────────
 -- Menu Items
 -- ─────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS menu_items (
@@ -21,6 +30,7 @@ CREATE TABLE IF NOT EXISTS menu_items (
   name         TEXT    NOT NULL,
   description  TEXT,
   price        REAL    NOT NULL,
+  cost_price   REAL    NOT NULL DEFAULT 0,
   category     TEXT    NOT NULL,
   image_url    TEXT,
   is_veg       INTEGER NOT NULL DEFAULT 1,    -- 1 = veg, 0 = non-veg

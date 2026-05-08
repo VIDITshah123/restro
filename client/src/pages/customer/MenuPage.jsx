@@ -198,7 +198,7 @@ const MenuPage = () => {
         <div className="p-4">
           <h2 className="text-lg font-bold mb-3">Recommended For You</h2>
           <div className="flex overflow-x-auto space-x-4 pb-2">
-            {menu.filter(m => recommendations.includes(m.id)).map(item => (
+            {menu.filter(m => recommendations.includes(m.id) && (!isVegOnly || m.is_veg !== 0)).map(item => (
               <div key={item.id} className="min-w-[160px] bg-white rounded-xl shadow-sm p-3 border">
                 <div className="flex justify-between items-start">
                   <h3 className="font-semibold line-clamp-1">{item.name}</h3>
@@ -218,44 +218,56 @@ const MenuPage = () => {
       )}
 
       {/* Menu List */}
-      <div className="p-4 space-y-4">
-        {filteredMenu.map(item => (
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            key={item.id} 
-            className={`bg-white rounded-xl shadow-sm border p-4 flex gap-4 ${!item.is_available ? 'opacity-50 grayscale' : ''}`}
-          >
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <span className={`w-3 h-3 border rounded-full flex items-center justify-center ${item.is_veg ? 'border-green-500' : 'border-red-500'}`}>
-                  <span className={`w-1.5 h-1.5 rounded-full ${item.is_veg ? 'bg-green-500' : 'bg-red-500'}`}></span>
-                </span>
-                <h3 className="font-bold text-lg">{item.name}</h3>
+      <div className="p-4 space-y-6">
+        {categories.filter(c => c !== 'All').map(category => {
+          const items = filteredMenu.filter(m => m.category === category);
+          if (items.length === 0) return null;
+          
+          return (
+            <div key={category}>
+              <h2 className="text-xl font-black mb-4 pb-2 border-b-2 border-gray-100 text-gray-800">{category}</h2>
+              <div className="space-y-4">
+                {items.map(item => (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    key={item.id} 
+                    className={`bg-white rounded-xl shadow-sm border p-4 flex gap-4 ${!item.is_available ? 'opacity-50 grayscale' : ''}`}
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className={`w-3 h-3 border rounded-full flex items-center justify-center ${item.is_veg ? 'border-green-500' : 'border-red-500'}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${item.is_veg ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                        </span>
+                        <h3 className="font-bold text-lg">{item.name}</h3>
+                      </div>
+                      <p className="text-gray-500 text-sm mb-2">{item.description}</p>
+                      <p className="font-semibold">₹{item.price}</p>
+                    </div>
+                    <div className="flex flex-col items-end justify-between">
+                      {item.image_url ? (
+                        <img src={item.image_url} alt={item.name} className="w-24 h-24 object-cover rounded-lg" />
+                      ) : (
+                        <div className="w-24 h-24 bg-gray-100 rounded-lg"></div>
+                      )}
+                      <button 
+                        disabled={!item.is_available}
+                        onClick={() => handleAddClick(item)}
+                        className={`mt-2 font-medium px-6 py-1.5 rounded-lg border shadow-sm ${
+                          !item.is_available
+                            ? 'bg-gray-200 text-gray-500 border-gray-300'
+                            : 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100'
+                        }`}
+                      >
+                        {!item.is_available ? 'OUT OF STOCK' : 'ADD'}
+                      </button>
+                    </div>
+                  </motion.div>
+                ))}
               </div>
-              <p className="text-gray-500 text-sm mb-2">{item.description}</p>
-              <p className="font-semibold">₹{item.price}</p>
             </div>
-            <div className="flex flex-col items-end justify-between">
-              {item.image_url ? (
-                <img src={item.image_url} alt={item.name} className="w-24 h-24 object-cover rounded-lg" />
-              ) : (
-                <div className="w-24 h-24 bg-gray-100 rounded-lg"></div>
-              )}
-              <button 
-                disabled={!item.is_available}
-                onClick={() => handleAddClick(item)}
-                className={`mt-2 font-medium px-6 py-1.5 rounded-lg border shadow-sm ${
-                  !item.is_available
-                    ? 'bg-gray-200 text-gray-500 border-gray-300'
-                    : 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100'
-                }`}
-              >
-                {!item.is_available ? 'OUT OF STOCK' : 'ADD'}
-              </button>
-            </div>
-          </motion.div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Customization Modal */}

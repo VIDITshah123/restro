@@ -80,6 +80,45 @@ const OrdersPage = () => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [reportType, setReportType] = useState('Order Wise');
   const [dishReport, setDishReport] = useState([]);
+  const [sortConfig, setSortConfig] = useState({ key: 'placed_at', direction: 'desc' });
+  const [dateRange, setDateRange] = useState({ start: '', end: '' });
+
+  const handleSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const filteredAndSortedOrders = React.useMemo(() => {
+    let result = [...orders];
+    if (dateRange.start) {
+      result = result.filter(o => new Date(o.placed_at) >= new Date(dateRange.start));
+    }
+    if (dateRange.end) {
+      const end = new Date(dateRange.end);
+      end.setDate(end.getDate() + 1);
+      result = result.filter(o => new Date(o.placed_at) < end);
+    }
+    result.sort((a, b) => {
+      let aVal = a[sortConfig.key];
+      let bVal = b[sortConfig.key];
+      
+      if (sortConfig.key === 'table_number') {
+        aVal = a.table_number || '';
+        bVal = b.table_number || '';
+      } else if (sortConfig.key === 'customer_name') {
+        aVal = (a.customer_name || 'Guest').toLowerCase();
+        bVal = (b.customer_name || 'Guest').toLowerCase();
+      }
+      
+      if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+    return result;
+  }, [orders, sortConfig, dateRange]);
 
   useEffect(() => {
     if (reportType === 'Dish Wise') {
@@ -152,6 +191,23 @@ const OrdersPage = () => {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Orders History & Reports</h1>
         <div className="flex gap-4">
+          {reportType === 'Order Wise' && (
+            <div className="flex gap-2">
+              <input 
+                type="date" 
+                value={dateRange.start} 
+                onChange={e => setDateRange({...dateRange, start: e.target.value})}
+                className="border-2 border-gray-200 rounded-lg px-2 py-1 text-sm outline-none"
+              />
+              <span className="self-center text-gray-500">to</span>
+              <input 
+                type="date" 
+                value={dateRange.end} 
+                onChange={e => setDateRange({...dateRange, end: e.target.value})}
+                className="border-2 border-gray-200 rounded-lg px-2 py-1 text-sm outline-none"
+              />
+            </div>
+          )}
           <select 
             value={reportType}
             onChange={e => setReportType(e.target.value)}
@@ -177,13 +233,27 @@ const OrdersPage = () => {
           <table className="w-full text-left">
             <thead className="bg-gray-50 border-b">
               <tr>
-                <th className="p-4 text-sm font-semibold text-gray-600">Order #</th>
-                <th className="p-4 text-sm font-semibold text-gray-600">Table</th>
-                <th className="p-4 text-sm font-semibold text-gray-600">Customer</th>
-                <th className="p-4 text-sm font-semibold text-gray-600">Total</th>
-                <th className="p-4 text-sm font-semibold text-gray-600">Payment</th>
-                <th className="p-4 text-sm font-semibold text-gray-600">Status</th>
-                <th className="p-4 text-sm font-semibold text-gray-600">Time</th>
+                <th onClick={() => handleSort('id')} className="p-4 text-sm font-semibold text-gray-600 cursor-pointer hover:bg-gray-200">
+                  Order # {sortConfig.key === 'id' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
+                </th>
+                <th onClick={() => handleSort('table_number')} className="p-4 text-sm font-semibold text-gray-600 cursor-pointer hover:bg-gray-200">
+                  Table {sortConfig.key === 'table_number' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
+                </th>
+                <th onClick={() => handleSort('customer_name')} className="p-4 text-sm font-semibold text-gray-600 cursor-pointer hover:bg-gray-200">
+                  Customer {sortConfig.key === 'customer_name' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
+                </th>
+                <th onClick={() => handleSort('total_amount')} className="p-4 text-sm font-semibold text-gray-600 cursor-pointer hover:bg-gray-200">
+                  Total {sortConfig.key === 'total_amount' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
+                </th>
+                <th onClick={() => handleSort('payment_method')} className="p-4 text-sm font-semibold text-gray-600 cursor-pointer hover:bg-gray-200">
+                  Payment {sortConfig.key === 'payment_method' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
+                </th>
+                <th onClick={() => handleSort('status')} className="p-4 text-sm font-semibold text-gray-600 cursor-pointer hover:bg-gray-200">
+                  Status {sortConfig.key === 'status' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
+                </th>
+                <th onClick={() => handleSort('placed_at')} className="p-4 text-sm font-semibold text-gray-600 cursor-pointer hover:bg-gray-200">
+                  Time {sortConfig.key === 'placed_at' ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y">
@@ -192,7 +262,7 @@ const OrdersPage = () => {
                 <th colSpan="7" className="p-10 text-center text-gray-400">No orders yet.</th>
                 </tr>
               )}
-              {orders.map(order => (
+              {filteredAndSortedOrders.map(order => (
                 <tr key={order.id} className="hover:bg-gray-50">
                   <td className="p-4 font-bold text-gray-800">
                     {order.order_number ? `#${String(order.order_number).padStart(2, '0')}` : `#${order.id}`}
