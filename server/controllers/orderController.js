@@ -154,17 +154,19 @@ const getBillingForTable = (req, res) => {
   let orders;
   if (lastBill && lastBill.last_billed) {
     orders = db.prepare(`
-      SELECT o.*, t.table_number
+      SELECT o.*, t.table_number, k.status as kot_status
       FROM orders o
       JOIN tables t ON o.table_id = t.id
+      LEFT JOIN kot k ON o.id = k.order_id
       WHERE o.table_id = ? AND o.status != 'billed' AND o.placed_at > ?
       ORDER BY o.placed_at ASC
     `).all(tableId, lastBill.last_billed);
   } else {
     orders = db.prepare(`
-      SELECT o.*, t.table_number
+      SELECT o.*, t.table_number, k.status as kot_status
       FROM orders o
       JOIN tables t ON o.table_id = t.id
+      LEFT JOIN kot k ON o.id = k.order_id
       WHERE o.table_id = ? AND o.status != 'billed'
       ORDER BY o.placed_at ASC
     `).all(tableId);

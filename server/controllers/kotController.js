@@ -57,7 +57,9 @@ const updateKotStatus = (req, res) => {
   if (req.io) {
     const payload = { kotId: parseInt(id), newStatus: status, orderId: kot.order_id, tableId: kot.table_id };
     req.io.of('/customer').to(`order:${kot.order_id}`).emit('kot:statusUpdate', payload);
+    req.io.of('/customer').to(`table:${kot.table_id}`).emit('kot:statusUpdate', payload);
     req.io.of('/admin').to('admin:global').emit('kot:statusUpdate', payload);
+    req.io.of('/kitchen').to('kitchen:global').emit('kot:statusUpdate', payload);
     req.io.of('/waiter').to('waiter:global').emit('kot:statusUpdate', payload);
     
     if (status === 'ready') {
@@ -70,9 +72,8 @@ const updateKotStatus = (req, res) => {
         tableNumber: tableInfo ? tableInfo.table_number : `Table ${kot.table_id}`
       });
     }
-    // Table freed only via Billing page (generateTableBill)
   }
-
+    // Table freed only via Billing page (generateTableBill)
   res.json({ success: true });
 };
 

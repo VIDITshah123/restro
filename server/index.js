@@ -39,6 +39,9 @@ io.of('/customer').on('connection', (socket) => {
   socket.on('join:order', ({ orderId }) => {
     socket.join(`order:${orderId}`);
   });
+  socket.on('join:table', ({ tableId }) => {
+    socket.join(`table:${tableId}`);
+  });
 });
 io.of('/kitchen').on('connection', (socket) => {
   socket.join('kitchen:global');

@@ -4,6 +4,7 @@ import { useSessionStore, useCartStore } from '../../store';
 import api from '../../api';
 import { ShoppingCart, Receipt, X, CheckCircle, Plus, Minus, CreditCard, FileText } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { io } from 'socket.io-client';
 
 const MenuPage = () => {
   const { tableId } = useParams();
@@ -117,6 +118,23 @@ const MenuPage = () => {
     };
     init();
   }, [tableId]);
+
+  useEffect(() => {
+    if (!showBillPopup || !tableId) return;
+    
+    const socket = io('http://localhost:3000/customer');
+    socket.emit('join:table', { tableId });
+
+    socket.on('kot:statusUpdate', ({ orderId, newStatus }) => {
+      setBillOrders(prev => prev.map(order => 
+        order.id === orderId 
+          ? { ...order, kot_status: newStatus } 
+          : order
+      ));
+    });
+
+    return () => socket.disconnect();
+  }, [showBillPopup, tableId]);
 
   const filteredMenu = menu.filter(item => {
     if (activeCategory !== 'All' && item.category !== activeCategory) return false;
@@ -489,8 +507,25 @@ const MenuPage = () => {
                       <div className="px-6 py-4 space-y-4">
                         {billOrders.map(order => (
                           <div key={order.id} className="border rounded-xl overflow-hidden">
-                            <div className="bg-gray-50 px-4 py-2 text-sm font-semibold text-gray-600">
-                              Order #{order.id} — {order.customer_name || 'Guest'}
+                            <div className="bg-gray-50 px-4 py-2 flex justify-between items-center text-sm font-semibold text-gray-600">
+                              <span>Order #{order.id} — {order.customer_name || 'Guest'}</span>
+                              {(() => {
+                                const status = order.kot_status || order.status;
+                                if (!status) return null;
+                                const statusMap = {
+                                  placed: { text: 'Placed', color: 'bg-blue-100 text-blue-700 border-blue-200' },
+                                  received: { text: 'In Kitchen', color: 'bg-purple-100 text-purple-700 border-purple-200' },
+                                  preparing: { text: 'Preparing', color: 'bg-amber-100 text-amber-700 border-amber-200' },
+                                  ready: { text: 'Ready', color: 'bg-orange-100 text-orange-700 border-orange-200' },
+                                  served: { text: 'Served', color: 'bg-green-100 text-green-700 border-green-200' }
+                                };
+                                const badge = statusMap[status] || { text: status.toUpperCase(), color: 'bg-gray-200 text-gray-700 border-gray-300' };
+                                return (
+                                  <span className={`px-2 py-0.5 rounded text-[10px] uppercase tracking-wider font-black border ${badge.color}`}>
+                                    {badge.text}
+                                  </span>
+                                );
+                              })()}
                             </div>
                             <div className="divide-y">
                               {order.items.map(item => (

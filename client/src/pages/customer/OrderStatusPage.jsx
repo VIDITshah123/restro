@@ -8,8 +8,8 @@ import { toIST } from '../../lib/utils';
 import { ArrowLeft } from 'lucide-react';
 
 const STATUS_STEPS = [
-  { key: 'placed', label: 'Order Placed', desc: 'We received your order' },
-  { key: 'received', label: 'Sent to Kitchen', desc: 'Chef has your order' },
+  { key: 'received', label: 'Order Placed', desc: 'Sent to kitchen' },
+  { key: 'accepted', label: 'Chef Accepted', desc: 'Kitchen acknowledged order' },
   { key: 'preparing', label: 'Preparing', desc: 'Your food is cooking' },
   { key: 'ready', label: 'Ready to Serve', desc: 'On its way to your table!' },
   { key: 'served', label: 'Served', desc: 'Enjoy your meal!' }
