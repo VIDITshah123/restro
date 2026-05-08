@@ -7,14 +7,14 @@ export const useAuthStore = create(persist((set) => ({
   email: null,
   login: (token, role, email) => set({ token, role, email }),
   logout: () => set({ token: null, role: null, email: null })
-}), { name: 'auth-storage' }));
+}), { name: 'restro-auth-storage' }));
 
 export const useSessionStore = create(persist((set) => ({
   tableId: null,
   tableNumber: null,
   setTable: (tableId, tableNumber) => set({ tableId, tableNumber }),
   clearTable: () => set({ tableId: null, tableNumber: null })
-}), { name: 'session-storage' }));
+}), { name: 'restro-session-storage' }));
 
 export const useCartStore = create(persist((set, get) => ({
   items: [], // { menuItemId, name, price, quantity, specialNotes, is_veg }
@@ -55,7 +55,7 @@ export const useCartStore = create(persist((set, get) => ({
   })),
   clearCart: () => set({ items: [] }),
   getTotal: () => get().items.reduce((sum, item) => sum + item.price * item.quantity, 0)
-}), { name: 'cart-storage' }));
+}), { name: 'restro-cart-storage' }));
 
 export const useOrderStore = create(persist((set) => ({
   currentOrder: null, // { orderId, status }
@@ -64,4 +64,4 @@ export const useOrderStore = create(persist((set) => ({
     currentOrder: state.currentOrder ? { ...state.currentOrder, status } : null
   })),
   clearOrder: () => set({ currentOrder: null })
-}), { name: 'order-storage' }));
+}), { name: 'restro-order-storage' }));

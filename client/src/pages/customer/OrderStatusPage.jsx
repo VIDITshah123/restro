@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useOrderStatusSocket } from '../../hooks/useSocket';
 import { useOrderStore } from '../../store';
 import api from '../../api';
 import { motion } from 'framer-motion';
 import { toIST } from '../../lib/utils';
+import { ArrowLeft } from 'lucide-react';
 
 const STATUS_STEPS = [
   { key: 'placed', label: 'Order Placed', desc: 'We received your order' },
@@ -16,6 +17,7 @@ const STATUS_STEPS = [
 
 const OrderStatusPage = () => {
   const { orderId } = useParams();
+  const navigate = useNavigate();
   useOrderStatusSocket(orderId);
   const { currentOrder } = useOrderStore();
   const [orderDetails, setOrderDetails] = useState(null);
@@ -50,9 +52,18 @@ const OrderStatusPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center py-10 px-4">
-      <h1 className="text-2xl font-bold mb-2">Track Your Order</h1>
-      <p className="text-gray-500 mb-10">Order #{orderId}</p>
+    <div className="min-h-screen bg-gray-50 flex flex-col items-center py-6 px-4">
+      <div className="w-full max-w-md flex items-center justify-between mb-2">
+        <button 
+          onClick={() => navigate(`/menu/${orderDetails.table_id}`)} 
+          className="p-2 bg-white rounded-full shadow-sm hover:bg-gray-100 transition-colors"
+        >
+          <ArrowLeft size={24} className="text-gray-700" />
+        </button>
+        <h1 className="text-2xl font-bold">Track Your Order</h1>
+        <div className="w-10"></div> {/* Spacer for centering */}
+      </div>
+      <p className="text-gray-500 mb-8 font-medium">Order #{orderId}</p>
 
       <div className="w-full max-w-md bg-white rounded-2xl shadow-sm border p-6 mb-6">
         <div className="space-y-8">
@@ -103,16 +114,22 @@ const OrderStatusPage = () => {
         </div>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t">
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t flex gap-3 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+        <button
+          onClick={() => navigate(`/menu/${orderDetails.table_id}`)}
+          className="w-1/3 bg-gray-100 text-black font-bold py-4 rounded-xl text-sm sm:text-base flex items-center justify-center hover:bg-gray-200 transition-colors border border-gray-200 shadow-sm"
+        >
+          Menu
+        </button>
         <button
           onClick={handleRequestBill}
           disabled={billRequested || activeStatus !== 'served'}
-          className={`w-full font-bold py-4 rounded-xl text-lg flex items-center justify-center gap-2 transition-colors
+          className={`flex-1 font-bold py-4 rounded-xl text-sm sm:text-base flex items-center justify-center gap-2 transition-all shadow-sm
             ${billRequested 
-              ? 'bg-green-100 text-green-700' 
+              ? 'bg-green-100 text-green-700 border border-green-200' 
               : activeStatus !== 'served'
-                ? 'bg-gray-200 text-gray-500'
-                : 'bg-black text-white hover:bg-gray-800'}`}
+                ? 'bg-gray-100 text-gray-400 border border-gray-200'
+                : 'bg-black text-white hover:bg-gray-800 hover:shadow-md'}`}
         >
           {billRequested ? 'Bill Requested ✅' : 'Request Bill'}
         </button>
