@@ -130,12 +130,15 @@ const MenuPage = () => {
   });
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-20">
-      {/* Header */}
-      <header className="sticky top-0 bg-white shadow-sm z-50 px-4 py-3 flex justify-between items-center">
+    <div className="min-h-screen bg-[#f8fafc] pb-20 font-sans selection:bg-orange-200">
+      {/* Header (Glassmorphism) */}
+      <header className="sticky top-0 backdrop-blur-xl bg-white/80 border-b border-gray-100 shadow-sm z-50 px-5 py-4 flex justify-between items-center transition-all duration-300">
         <div>
-          <h1 className="text-xl font-bold">Menu</h1>
-          <p className="text-sm text-gray-500">{tableNumber || 'Loading table...'}</p>
+          <h1 className="text-2xl font-black bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent tracking-tight">Menu</h1>
+          <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mt-0.5 flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+            Table {tableNumber || '...'}
+          </p>
         </div>
         <div className="flex items-center gap-3">
           <button 
@@ -159,26 +162,30 @@ const MenuPage = () => {
       </header>
 
       {/* Search & Filters */}
-      <div className="p-4 bg-white space-y-4">
-        <input 
-          type="text" 
-          placeholder="Search dishes..." 
-          className="w-full p-2 border rounded-lg"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+      <div className="px-5 py-4 space-y-4 relative z-10">
+        <div className="relative">
+          <input 
+            type="text" 
+            placeholder="Search your cravings..." 
+            className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-2xl shadow-sm focus:ring-2 focus:ring-black focus:border-transparent transition-all outline-none font-medium placeholder:font-normal"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <svg className="absolute left-3.5 top-3.5 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        </div>
         
         <div className="flex items-center justify-between">
-          <div className="flex space-x-2 overflow-x-auto pb-2 scrollbar-hide">
+          <div className="flex space-x-2 overflow-x-auto pb-2 scrollbar-hide pt-1">
             {categories.map(cat => (
-              <button 
+              <motion.button 
+                whileTap={{ scale: 0.95 }}
                 key={cat} 
                 onClick={() => setActiveCategory(cat)}
-                className={`whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-medium transition-colors
-                  ${activeCategory === cat ? 'bg-black text-white' : 'bg-gray-100 text-gray-700'}`}
+                className={`whitespace-nowrap px-5 py-2 rounded-xl text-sm font-bold transition-all duration-300 shadow-sm
+                  ${activeCategory === cat ? 'bg-black text-white shadow-md transform -translate-y-0.5' : 'bg-white text-gray-600 border border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}
               >
                 {cat}
-              </button>
+              </motion.button>
             ))}
           </div>
           <label className="flex items-center space-x-2 shrink-0 ml-4">
@@ -195,71 +202,90 @@ const MenuPage = () => {
 
       {/* AI Recommendations */}
       {recommendations.length > 0 && !search && activeCategory === 'All' && (
-        <div className="p-4">
-          <h2 className="text-lg font-bold mb-3">Recommended For You</h2>
-          <div className="flex overflow-x-auto space-x-4 pb-2">
+        <div className="px-5 pt-2 pb-6">
+          <h2 className="text-lg font-black mb-4 flex items-center gap-2">
+            <span className="text-xl">✨</span> Top Picks For You
+          </h2>
+          <div className="flex overflow-x-auto space-x-4 pb-4 scrollbar-hide">
             {menu.filter(m => recommendations.includes(m.id) && (!isVegOnly || m.is_veg !== 0)).map(item => (
-              <div key={item.id} className="min-w-[160px] bg-white rounded-xl shadow-sm p-3 border">
-                <div className="flex justify-between items-start">
-                  <h3 className="font-semibold line-clamp-1">{item.name}</h3>
-                  <span className={`w-3 h-3 rounded-full ${item.is_veg ? 'bg-green-500' : 'bg-red-500'}`}></span>
+              <motion.div 
+                whileHover={{ y: -4 }}
+                whileTap={{ scale: 0.98 }}
+                key={item.id} 
+                className="min-w-[180px] bg-gradient-to-br from-amber-50 to-orange-50/30 rounded-2xl shadow-sm p-4 border border-amber-100/50 flex flex-col justify-between"
+              >
+                <div>
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="font-bold text-gray-900 line-clamp-2 leading-tight pr-2">{item.name}</h3>
+                    <span className={`shrink-0 w-2.5 h-2.5 rounded-full ${item.is_veg ? 'bg-green-500' : 'bg-red-500'} shadow-sm mt-1`}></span>
+                  </div>
+                  <p className="text-gray-600 font-bold">₹{item.price}</p>
                 </div>
-                <p className="text-gray-500 mt-1">₹{item.price}</p>
                 <button 
                   onClick={() => handleAddClick(item)}
-                  className="w-full mt-2 bg-black text-white py-1 rounded-lg text-sm"
+                  className="w-full mt-4 bg-white text-black border border-gray-200 py-2 rounded-xl text-sm font-bold shadow-sm hover:shadow-md hover:border-black transition-all"
                 >
-                  Add
+                  Add to Cart
                 </button>
-              </div>
+              </motion.div>
             ))}
           </div>
         </div>
       )}
 
       {/* Menu List */}
-      <div className="p-4 space-y-6">
+      <div className="px-5 space-y-8">
         {categories.filter(c => c !== 'All').map(category => {
           const items = filteredMenu.filter(m => m.category === category);
           if (items.length === 0) return null;
           
           return (
-            <div key={category}>
-              <h2 className="text-xl font-black mb-4 pb-2 border-b-2 border-gray-100 text-gray-800">{category}</h2>
+            <div key={category} className="scroll-mt-24" id={`cat-${category}`}>
+              <h2 className="text-2xl font-black mb-5 text-gray-900 tracking-tight flex items-center gap-3">
+                {category}
+                <div className="h-px bg-gray-200 flex-1 mt-1"></div>
+              </h2>
               <div className="space-y-4">
                 {items.map(item => (
                   <motion.div 
-                    initial={{ opacity: 0, y: 10 }}
+                    initial={{ opacity: 0, y: 15 }}
                     animate={{ opacity: 1, y: 0 }}
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.99 }}
+                    transition={{ duration: 0.2 }}
                     key={item.id} 
-                    className={`bg-white rounded-xl shadow-sm border p-4 flex gap-4 ${!item.is_available ? 'opacity-50 grayscale' : ''}`}
+                    className={`bg-white rounded-2xl shadow-[0_2px_10px_-4px_rgba(0,0,0,0.1)] border border-gray-100 p-4 flex gap-4 transition-all hover:shadow-[0_8px_20px_-6px_rgba(0,0,0,0.1)] ${!item.is_available ? 'opacity-60 grayscale' : ''}`}
                   >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className={`w-3 h-3 border rounded-full flex items-center justify-center ${item.is_veg ? 'border-green-500' : 'border-red-500'}`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${item.is_veg ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                    <div className="flex-1 flex flex-col justify-center">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <span className={`w-3.5 h-3.5 border rounded-sm flex items-center justify-center ${item.is_veg ? 'border-green-600' : 'border-red-600'} bg-white`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${item.is_veg ? 'bg-green-600' : 'bg-red-600'}`}></span>
                         </span>
-                        <h3 className="font-bold text-lg">{item.name}</h3>
+                        <h3 className="font-bold text-lg text-gray-900 leading-tight">{item.name}</h3>
                       </div>
-                      <p className="text-gray-500 text-sm mb-2">{item.description}</p>
-                      <p className="font-semibold">₹{item.price}</p>
+                      <p className="text-gray-500 text-sm mb-3 line-clamp-2 leading-relaxed">{item.description}</p>
+                      <p className="font-black text-gray-900 text-lg tracking-tight">₹{item.price}</p>
                     </div>
-                    <div className="flex flex-col items-end justify-between">
+                    <div className="flex flex-col items-end justify-between min-w-[100px]">
                       {item.image_url ? (
-                        <img src={item.image_url} alt={item.name} className="w-24 h-24 object-cover rounded-lg" />
+                        <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-xl overflow-hidden shadow-sm border border-gray-100">
+                          <img src={item.image_url} alt={item.name} className="w-full h-full object-cover hover:scale-110 transition-transform duration-500" />
+                        </div>
                       ) : (
-                        <div className="w-24 h-24 bg-gray-100 rounded-lg"></div>
+                        <div className="w-24 h-24 sm:w-28 sm:h-28 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl border border-gray-100 flex items-center justify-center shadow-inner">
+                          <span className="text-gray-300 text-xs font-bold uppercase tracking-widest">No Image</span>
+                        </div>
                       )}
                       <button 
                         disabled={!item.is_available}
                         onClick={() => handleAddClick(item)}
-                        className={`mt-2 font-medium px-6 py-1.5 rounded-lg border shadow-sm ${
+                        className={`mt-[-16px] relative z-10 font-bold px-6 py-2 rounded-xl border-2 shadow-sm uppercase tracking-wide text-xs transition-all ${
                           !item.is_available
-                            ? 'bg-gray-200 text-gray-500 border-gray-300'
-                            : 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100'
+                            ? 'bg-gray-100 text-gray-400 border-gray-200'
+                            : 'bg-white text-green-600 border-green-600 hover:bg-green-50 hover:shadow-md active:bg-green-100'
                         }`}
                       >
-                        {!item.is_available ? 'OUT OF STOCK' : 'ADD'}
+                        {!item.is_available ? 'Sold Out' : 'Add'}
                       </button>
                     </div>
                   </motion.div>
@@ -271,18 +297,25 @@ const MenuPage = () => {
       </div>
 
       {/* Customization Modal */}
+      <AnimatePresence>
       {customizingItem && (
-        <div className="fixed inset-0 bg-black/50 z-[100] flex items-end sm:items-center justify-center">
-          <div className="bg-white w-full sm:w-[420px] sm:rounded-2xl rounded-t-2xl p-5 pb-safe">
-            <div className="flex justify-between items-start mb-4">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4">
+          <motion.div 
+            initial={{ y: "100%", opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: "100%", opacity: 0 }}
+            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            className="bg-white w-full sm:w-[460px] sm:rounded-3xl rounded-t-3xl p-6 pb-8 shadow-2xl flex flex-col max-h-[90vh]"
+          >
+            <div className="flex justify-between items-start mb-6 shrink-0">
               <div>
-                <h2 className="text-xl font-bold">{customizingItem.name}</h2>
-                <p className="text-gray-500 text-sm">Customize your order</p>
+                <h2 className="text-2xl font-black text-gray-900 tracking-tight">{customizingItem.name}</h2>
+                <p className="text-gray-500 text-sm font-medium mt-1">Customize your order</p>
               </div>
-              <button onClick={() => setCustomizingItem(null)} className="text-gray-400 p-1">✕</button>
+              <button onClick={() => setCustomizingItem(null)} className="text-gray-400 hover:text-black bg-gray-100 hover:bg-gray-200 rounded-full p-2 transition-colors">✕</button>
             </div>
             
-            <div className="space-y-4 max-h-[60vh] overflow-y-auto pb-4">
+            <div className="space-y-6 overflow-y-auto pr-2 scrollbar-hide pb-4 flex-1">
               {/* Add-ons from DB */}
               {customizingItem.variants && customizingItem.variants.length > 0 && (
                 <div>
@@ -371,36 +404,44 @@ const MenuPage = () => {
 
               {/* Quantity Selector */}
               <div>
-                <h3 className="font-semibold mb-2">Quantity</h3>
-                <div className="flex items-center gap-3 bg-gray-50 rounded-lg px-4 py-2 border w-fit">
+                <h3 className="font-bold text-gray-900 mb-3">Quantity</h3>
+                <div className="flex items-center gap-4 bg-gray-50 rounded-2xl p-2 border border-gray-100 w-fit">
                   <button 
                     onClick={() => setCustomQty(q => Math.max(1, q - 1))} 
-                    className="p-1 hover:bg-gray-200 rounded transition-colors"
+                    className="p-3 bg-white hover:bg-gray-100 rounded-xl shadow-sm transition-all border border-gray-100"
                     disabled={customQty <= 1}
                   >
-                    <Minus size={20} className={customQty <= 1 ? 'text-gray-300' : 'text-gray-700'} />
+                    <Minus size={20} className={customQty <= 1 ? 'text-gray-300' : 'text-black'} />
                   </button>
-                  <span className="font-bold text-lg w-8 text-center">{customQty}</span>
+                  <span className="font-black text-2xl w-10 text-center text-gray-900">{customQty}</span>
                   <button 
                     onClick={() => setCustomQty(q => q + 1)} 
-                    className="p-1 hover:bg-gray-200 rounded transition-colors"
+                    className="p-3 bg-white hover:bg-gray-100 rounded-xl shadow-sm transition-all border border-gray-100"
                   >
-                    <Plus size={20} className="text-gray-700" />
+                    <Plus size={20} className="text-black" />
                   </button>
                 </div>
               </div>
             </div>
 
-            <button onClick={confirmAdd} className="w-full bg-black text-white font-bold py-3 rounded-xl mt-2">
-              {(() => {
-                const addonsPrice = customOptions.selectedVariants.reduce((sum, v) => sum + v.price, 0);
-                const effectivePrice = customizingItem.price + addonsPrice;
-                return `Add to Cart — ₹${(effectivePrice * customQty).toFixed(0)}`;
-              })()}
-            </button>
-          </div>
+            <div className="pt-4 mt-2 shrink-0 border-t border-gray-100">
+              <motion.button 
+                whileTap={{ scale: 0.98 }}
+                onClick={confirmAdd} 
+                className="w-full bg-black text-white font-bold py-4 rounded-2xl shadow-[0_4px_14px_0_rgba(0,0,0,0.39)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.23)] transition-all flex justify-between items-center px-6 text-lg tracking-wide"
+              >
+                <span>Add to Cart</span>
+                {(() => {
+                  const addonsPrice = customOptions.selectedVariants.reduce((sum, v) => sum + v.price, 0);
+                  const effectivePrice = customizingItem.price + addonsPrice;
+                  return <span>₹{(effectivePrice * customQty).toFixed(0)}</span>;
+                })()}
+              </motion.button>
+            </div>
+          </motion.div>
         </div>
       )}
+      </AnimatePresence>
 
       {/* Bill Popup */}
       <AnimatePresence>
