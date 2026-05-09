@@ -33,6 +33,18 @@ const KOTHistory = () => {
   const sortedKots = [...kots].sort((a, b) => {
     if (sortOption === 'Newest First') return new Date(b.generated_at) - new Date(a.generated_at);
     if (sortOption === 'Oldest First') return new Date(a.generated_at) - new Date(b.generated_at);
+    if (sortOption === 'Table Name (A-Z)') return (a.table_number || '').localeCompare(b.table_number || '');
+    if (sortOption === 'Table Name (Z-A)') return (b.table_number || '').localeCompare(a.table_number || '');
+    if (sortOption === 'KOT Number (High to Low)') {
+      const numA = parseInt(a.kot_number.replace('KOT-', '')) || 0;
+      const numB = parseInt(b.kot_number.replace('KOT-', '')) || 0;
+      return numB - numA;
+    }
+    if (sortOption === 'KOT Number (Low to High)') {
+      const numA = parseInt(a.kot_number.replace('KOT-', '')) || 0;
+      const numB = parseInt(b.kot_number.replace('KOT-', '')) || 0;
+      return numA - numB;
+    }
     return 0;
   });
 
@@ -48,6 +60,10 @@ const KOTHistory = () => {
           >
             <option>Newest First</option>
             <option>Oldest First</option>
+            <option>Table Name (A-Z)</option>
+            <option>Table Name (Z-A)</option>
+            <option>KOT Number (High to Low)</option>
+            <option>KOT Number (Low to High)</option>
           </select>
           <button 
             onClick={clearHistory}

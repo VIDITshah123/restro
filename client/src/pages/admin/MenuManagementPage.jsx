@@ -1,17 +1,20 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import api from '../../api';
-import { Upload, X, Image as ImageIcon } from 'lucide-react';
+import { Upload, X, Image as ImageIcon, Download, FileSpreadsheet } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 const MenuManagementPage = () => {
   const [menu, setMenu] = useState([]);
   const [categories, setCategories] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [draggedCatIndex, setDraggedCatIndex] = useState(null);
   const [editingItem, setEditingItem] = useState(null);
   const [variantPanelItem, setVariantPanelItem] = useState(null);
   const [variants, setVariants] = useState([]);
-  const [variantForm, setVariantForm] = useState({ name: '', price: '' });
+  const [variantForm, setVariantForm] = useState({ name: '', price: '', cost_price: '' });
   const [sortOption, setSortOption] = useState('Default');
+  const [showComboBuilder, setShowComboBuilder] = useState(false);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -29,6 +32,7 @@ const MenuManagementPage = () => {
   const [imagePreview, setImagePreview] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef(null);
+  const excelInputRef = useRef(null);
 
   const fetchMenu = async () => {
     try {
@@ -69,7 +73,8 @@ const MenuManagementPage = () => {
     setFormData(prev => ({ ...prev, tags: prev.tags.filter(t => t !== tagToRemove) }));
   };
 
-  const handleOpenModal = (item = null) => {
+  const handleOpenModal = (item = null, isCombo = false) => {
+    setShowComboBuilder(isCombo);
     if (item) {
       setEditingItem(item);
       setFormData({
@@ -87,7 +92,7 @@ const MenuManagementPage = () => {
     } else {
       setEditingItem(null);
       setFormData({
-        name: '', description: '', price: '', cost_price: '', category: '', image_url: '', is_veg: 1, is_available: 1, tags: []
+        name: '', description: '', price: '', cost_price: '', category: isCombo ? 'Combo Meals' : '', image_url: '', is_veg: 1, is_available: 1, tags: []
       });
       setImagePreview(null);
     }
@@ -170,7 +175,7 @@ const MenuManagementPage = () => {
 
   const openVariantPanel = async (item) => {
     setVariantPanelItem(item);
-    setVariantForm({ name: '', price: '' });
+    setVariantForm({ name: '', price: '', cost_price: '' });
     const res = await api.get(`/menu/${item.id}/variants`);
     setVariants(res.data.data);
   };
@@ -181,7 +186,7 @@ const MenuManagementPage = () => {
       await api.post(`/menu/${variantPanelItem.id}/variants`, variantForm);
       const res = await api.get(`/menu/${variantPanelItem.id}/variants`);
       setVariants(res.data.data);
-      setVariantForm({ name: '', price: '' });
+      setVariantForm({ name: '', price: '', cost_price: '' });
     } catch (err) {
       alert('Error adding variant');
     }
@@ -206,15 +211,23 @@ const MenuManagementPage = () => {
     return 0;
   });
 
-  const moveCategory = (index, direction) => {
+  const handleDragStartCat = (e, index) => {
+    setDraggedCatIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOverCat = (e, index) => {
+    e.preventDefault(); 
+  };
+
+  const handleDropCat = (e, targetIndex) => {
+    e.preventDefault();
+    if (draggedCatIndex === null || draggedCatIndex === targetIndex) return;
     const newCats = [...categories];
-    if (direction === 'up' && index > 0) {
-      [newCats[index - 1], newCats[index]] = [newCats[index], newCats[index - 1]];
-      setCategories(newCats);
-    } else if (direction === 'down' && index < newCats.length - 1) {
-      [newCats[index + 1], newCats[index]] = [newCats[index], newCats[index + 1]];
-      setCategories(newCats);
-    }
+    const [removed] = newCats.splice(draggedCatIndex, 1);
+    newCats.splice(targetIndex, 0, removed);
+    setCategories(newCats);
+    setDraggedCatIndex(null);
   };
 
   const saveCategoryOrder = async () => {
@@ -225,6 +238,85 @@ const MenuManagementPage = () => {
     } catch (err) {
       alert('Error saving category order');
     }
+  };
+
+  const downloadFormat = () => {
+    const wsData = [
+      ['Name', 'Description', 'Price', 'CostPrice', 'Category', 'IsVeg', 'Tags', 'Variants'],
+      ['Margherita Pizza', 'Classic cheese pizza', 299, 100, 'Pizza', 1, 'Bestseller, Cheesy', 'Extra Cheese:50:20|Olives:30:10']
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "MenuFormat");
+    XLSX.writeFile(wb, "Menu_Import_Format.xlsx");
+  };
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const bstr = evt.target.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const data = XLSX.utils.sheet_to_json(ws, { defval: '' });
+
+        if (data.length === 0) {
+          return alert('File is empty');
+        }
+
+        const expectedKeys = ['Name', 'Description', 'Price', 'CostPrice', 'Category', 'IsVeg', 'Tags', 'Variants'];
+        const actualKeys = Object.keys(data[0]);
+        
+        const hasAllKeys = expectedKeys.every(k => actualKeys.includes(k));
+        if (!hasAllKeys) {
+          return alert(`Invalid format! Please use the downloaded format.\nMissing columns: ${expectedKeys.filter(k => !actualKeys.includes(k)).join(', ')}`);
+        }
+
+        const itemsToImport = data.map(row => {
+          let parsedVariants = [];
+          if (row.Variants && typeof row.Variants === 'string') {
+            parsedVariants = row.Variants.split('|').map(v => {
+              const parts = v.split(':');
+              const name = parts[0]?.trim();
+              const price = parseFloat(parts[1]);
+              const cost_price = parts[2] ? parseFloat(parts[2]) : 0;
+              return { name, price, cost_price };
+            }).filter(v => v.name && !isNaN(v.price));
+          }
+
+          return {
+            name: row.Name,
+            description: row.Description,
+            price: row.Price,
+            cost_price: row.CostPrice,
+            category: row.Category,
+            is_veg: row.IsVeg,
+            tags: row.Tags ? JSON.stringify(row.Tags.toString().split(',').map(t => t.trim()).filter(Boolean)) : '[]',
+            variants: parsedVariants
+          };
+        });
+
+        const res = await api.post('/menu/bulk', { items: itemsToImport });
+        const { imported, skipped, errors } = res.data.data;
+        
+        if (errors && errors.length > 0) {
+          alert(`Import completed with errors.\nImported: ${imported}\nSkipped (Duplicates): ${skipped}\n\nErrors:\n${errors.join('\n')}`);
+        } else {
+          alert(`Successfully imported ${imported} items. Skipped ${skipped} duplicates.`);
+        }
+        
+        fetchMenu();
+      } catch (err) {
+        console.error(err);
+        alert('Failed to parse excel file');
+      }
+    };
+    reader.readAsBinaryString(file);
+    e.target.value = null;
   };
 
   return (
@@ -245,10 +337,28 @@ const MenuManagementPage = () => {
             <option>Type (Veg First)</option>
             <option>Type (Non-Veg First)</option>
           </select>
-          <button onClick={() => setIsCategoryModalOpen(true)} className="border border-gray-300 bg-white text-gray-700 px-4 py-2 rounded-lg font-medium">
+          <button onClick={downloadFormat} className="flex items-center gap-2 border border-gray-300 bg-white text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-50">
+            <Download size={16} /> Format
+          </button>
+          <div>
+            <input 
+              type="file" 
+              accept=".xlsx, .xls, .csv" 
+              className="hidden" 
+              ref={excelInputRef}
+              onChange={handleFileUpload}
+            />
+            <button onClick={() => excelInputRef.current?.click()} className="flex items-center gap-2 border border-gray-300 bg-white text-green-700 px-4 py-2 rounded-lg font-medium hover:bg-green-50">
+              <FileSpreadsheet size={16} /> Import
+            </button>
+          </div>
+          <button onClick={() => setIsCategoryModalOpen(true)} className="border border-gray-300 bg-white text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-50">
             Manage Categories
           </button>
-          <button onClick={() => handleOpenModal()} className="bg-black text-white px-4 py-2 rounded-lg font-medium">
+          <button onClick={() => handleOpenModal(null, true)} className="bg-orange-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-orange-700">
+            + Combo Meal
+          </button>
+          <button onClick={() => handleOpenModal()} className="bg-black text-white px-4 py-2 rounded-lg font-medium hover:bg-gray-800">
             + Add New Item
           </button>
         </div>
@@ -341,9 +451,16 @@ const MenuManagementPage = () => {
               <input
                 required
                 type="number"
-                placeholder="₹"
+                placeholder="Sell ₹"
                 value={variantForm.price}
                 onChange={e => setVariantForm({ ...variantForm, price: e.target.value })}
+                className="w-20 border rounded-lg p-2 text-sm"
+              />
+              <input
+                type="number"
+                placeholder="Cost ₹"
+                value={variantForm.cost_price}
+                onChange={e => setVariantForm({ ...variantForm, cost_price: e.target.value })}
                 className="w-20 border rounded-lg p-2 text-sm"
               />
               <button type="submit" className="bg-black text-white px-3 py-2 rounded-lg text-sm font-bold">Add</button>
@@ -361,27 +478,94 @@ const MenuManagementPage = () => {
                 <label className="block text-sm font-medium mb-1">Name</label>
                 <input required type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full border rounded-lg p-2" />
               </div>
-              <div className="grid grid-cols-3 gap-4">
+
+              <div className="flex gap-4 bg-gray-50 p-3 rounded-lg border border-gray-200">
+                <span className="text-sm font-medium text-gray-700 mr-4">Type:</span>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" name="is_veg" checked={formData.is_veg === 1} onChange={() => setFormData({...formData, is_veg: 1})} className="accent-black" />
+                  <span className="text-sm font-medium text-green-700">Veg</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="radio" name="is_veg" checked={formData.is_veg === 0} onChange={() => setFormData({...formData, is_veg: 0})} className="accent-black" />
+                  <span className="text-sm font-medium text-red-700">Non-Veg</span>
+                </label>
+              </div>
+              <div className={`grid ${showComboBuilder ? 'grid-cols-2' : 'grid-cols-3'} gap-4`}>
                 <div>
                   <label className="block text-sm font-medium mb-1">Selling Price (₹)</label>
                   <input required type="number" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} className="w-full border rounded-lg p-2" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Cost Price (₹)</label>
-                  <input type="number" value={formData.cost_price} onChange={e => setFormData({...formData, cost_price: e.target.value})} className="w-full border rounded-lg p-2" placeholder="Optional" />
+                  <label className="block text-sm font-medium mb-1">Cost Price (₹) {showComboBuilder && <span className="text-xs text-orange-600 font-normal">(Auto-calculated)</span>}</label>
+                  <input type="number" value={formData.cost_price} onChange={e => setFormData({...formData, cost_price: e.target.value})} className="w-full border rounded-lg p-2" placeholder="Optional" readOnly={showComboBuilder} />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Category</label>
-                  <input required list="categories" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} className="w-full border rounded-lg p-2" placeholder="e.g. Starters" />
-                  <datalist id="categories">
-                    {categories.map(c => <option key={c} value={c} />)}
-                  </datalist>
-                </div>
+                {!showComboBuilder && (
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Category</label>
+                    <input required list="categories" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} className="w-full border rounded-lg p-2" placeholder="e.g. Starters" />
+                    <datalist id="categories">
+                      {categories.map(c => <option key={c} value={c} />)}
+                    </datalist>
+                  </div>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1">Description</label>
                 <textarea rows="2" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="w-full border rounded-lg p-2"></textarea>
               </div>
+
+              {showComboBuilder && (
+                <div className="bg-orange-50 p-4 rounded-lg border border-orange-200 mt-2 space-y-2">
+                  <h3 className="font-bold text-orange-800 text-sm">Combo Builder (Select items to add)</h3>
+                  <div className="max-h-60 overflow-y-auto bg-white border rounded p-2 space-y-2">
+                    {menu.filter(m => m.is_available && m.category !== 'Combo Meals' && m.is_veg === formData.is_veg).map(mi => (
+                      <div key={mi.id} className="border-b pb-2 last:border-0 last:pb-0">
+                        <label className="flex items-center gap-2 cursor-pointer text-sm p-1 hover:bg-gray-50">
+                          <input type="checkbox" onChange={(e) => {
+                            const cost = parseFloat(mi.cost_price) || 0;
+                            const nameText = `1x ${mi.name}`;
+                            let newCost = parseFloat(formData.cost_price) || 0;
+                            let newDesc = formData.description || '';
+                            if (e.target.checked) {
+                               newCost += cost;
+                               newDesc = newDesc ? `${newDesc}\n- ${nameText}` : `- ${nameText}`;
+                            } else {
+                               newCost -= cost;
+                               newDesc = newDesc.replace(`- ${nameText}`, '').replace(/\n\n/g, '\n').trim();
+                            }
+                            setFormData({...formData, cost_price: Math.max(0, newCost), description: newDesc});
+                          }} className="accent-orange-600" />
+                          <span className="font-medium">{mi.name}</span> <span className="text-gray-400 text-xs">(Cost: ₹{mi.cost_price || 0})</span>
+                        </label>
+                        {mi.variants && mi.variants.length > 0 && (
+                          <div className="ml-6 mt-1 space-y-1">
+                            {mi.variants.map(v => (
+                              <label key={v.id} className="flex items-center gap-2 cursor-pointer text-xs p-1 hover:bg-gray-50 text-gray-600">
+                                <input type="checkbox" onChange={(e) => {
+                                  const cost = parseFloat(v.cost_price) || 0;
+                                  const nameText = `1x ${mi.name} (${v.name})`;
+                                  let newCost = parseFloat(formData.cost_price) || 0;
+                                  let newDesc = formData.description || '';
+                                  if (e.target.checked) {
+                                     newCost += cost;
+                                     newDesc = newDesc ? `${newDesc}\n- ${nameText}` : `- ${nameText}`;
+                                  } else {
+                                     newCost -= cost;
+                                     newDesc = newDesc.replace(`- ${nameText}`, '').replace(/\n\n/g, '\n').trim();
+                                  }
+                                  setFormData({...formData, cost_price: Math.max(0, newCost), description: newDesc});
+                                }} className="accent-orange-400" />
+                                {v.name} <span className="text-gray-400">(Cost: ₹{v.cost_price || 0})</span>
+                              </label>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div>
                 <label className="block text-sm font-medium mb-1">Image</label>
                 <div
@@ -431,16 +615,7 @@ const MenuManagementPage = () => {
                   className="w-full border rounded-lg p-2 mt-2 text-sm"
                 />
               </div>
-              <div className="flex gap-4">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="radio" name="is_veg" checked={formData.is_veg === 1} onChange={() => setFormData({...formData, is_veg: 1})} className="accent-black" />
-                  <span className="text-sm font-medium text-green-700">Veg</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="radio" name="is_veg" checked={formData.is_veg === 0} onChange={() => setFormData({...formData, is_veg: 0})} className="accent-black" />
-                  <span className="text-sm font-medium text-red-700">Non-Veg</span>
-                </label>
-              </div>
+              {/* Removed duplicate Veg/Non-Veg from here as it was moved to the top */}
 
               {/* Customizable Tag Options */}
               <div className="pt-2 border-t mt-4">
@@ -481,23 +656,17 @@ const MenuManagementPage = () => {
             <p className="text-sm text-gray-500 mb-4">Categories appear on the customer app in this order.</p>
             <div className="space-y-2 mb-6 max-h-64 overflow-y-auto">
               {categories.map((cat, i) => (
-                <div key={cat} className="flex justify-between items-center p-3 border rounded-lg bg-gray-50">
-                  <span className="font-medium">{cat}</span>
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={() => moveCategory(i, 'up')} 
-                      disabled={i === 0}
-                      className="p-1 border rounded bg-white disabled:opacity-30"
-                    >
-                      ↑
-                    </button>
-                    <button 
-                      onClick={() => moveCategory(i, 'down')} 
-                      disabled={i === categories.length - 1}
-                      className="p-1 border rounded bg-white disabled:opacity-30"
-                    >
-                      ↓
-                    </button>
+                <div 
+                  key={cat} 
+                  draggable
+                  onDragStart={(e) => handleDragStartCat(e, i)}
+                  onDragOver={(e) => handleDragOverCat(e, i)}
+                  onDrop={(e) => handleDropCat(e, i)}
+                  className={`flex justify-between items-center p-3 border rounded-lg bg-white cursor-move transition-all ${draggedCatIndex === i ? 'opacity-50 border-orange-500 scale-[0.98]' : 'hover:border-gray-400 hover:shadow-sm'}`}
+                >
+                  <div className="flex items-center gap-3">
+                     <span className="text-gray-400 cursor-grab">⋮⋮</span>
+                     <span className="font-medium select-none">{cat}</span>
                   </div>
                 </div>
               ))}

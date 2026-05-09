@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../api';
 import { toIST, toISTFull } from '../../lib/utils';
+import * as XLSX from 'xlsx';
 
 const STATUS_COLORS = {
   placed:    'bg-blue-100 text-blue-700',
@@ -122,9 +123,12 @@ const OrdersPage = () => {
 
   useEffect(() => {
     if (reportType === 'Dish Wise') {
-      api.get('/analytics/top-dishes?limit=1000').then(res => setDishReport(res.data.data)).catch(console.error);
+      let url = '/analytics/top-dishes?limit=1000';
+      if (dateRange.start) url += `&start=${dateRange.start}`;
+      if (dateRange.end) url += `&end=${dateRange.end}`;
+      api.get(url).then(res => setDishReport(res.data.data)).catch(console.error);
     }
-  }, [reportType]);
+  }, [reportType, dateRange]);
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -153,7 +157,7 @@ const OrdersPage = () => {
   };
 
   const getTableReport = () => {
-    const data = orders.reduce((acc, o) => {
+    const data = filteredAndSortedOrders.reduce((acc, o) => {
       const t = o.table_number || `Table ${o.table_id}`;
       if (!acc[t]) acc[t] = { orders: 0, revenue: 0 };
       acc[t].orders++;
@@ -164,7 +168,7 @@ const OrdersPage = () => {
   };
 
   const getPaymentReport = () => {
-    const data = orders.reduce((acc, o) => {
+    const data = filteredAndSortedOrders.reduce((acc, o) => {
       const p = o.payment_method || 'Unpaid';
       if (!acc[p]) acc[p] = { orders: 0, revenue: 0 };
       acc[p].orders++;
@@ -175,7 +179,7 @@ const OrdersPage = () => {
   };
 
   const getTimeReport = () => {
-    const data = orders.reduce((acc, o) => {
+    const data = filteredAndSortedOrders.reduce((acc, o) => {
       const hour = new Date(o.placed_at).getHours();
       const timeStr = `${String(hour).padStart(2, '0')}:00 - ${String(hour + 1).padStart(2, '0')}:00`;
       if (!acc[timeStr]) acc[timeStr] = { orders: 0, revenue: 0, hour };
@@ -186,28 +190,54 @@ const OrdersPage = () => {
     return Object.values(data).sort((a,b) => a.hour - b.hour);
   };
 
+  const handleExport = () => {
+    let dataToExport = [];
+    if (reportType === 'Order Wise') {
+      dataToExport = filteredAndSortedOrders.map(o => ({
+        OrderID: o.id,
+        Table: o.table_number || `Table ${o.table_id}`,
+        Customer: o.customer_name || 'Guest',
+        Total: o.total_amount,
+        Payment: o.payment_method || 'Unpaid',
+        Status: o.status,
+        Time: toISTFull(o.placed_at)
+      }));
+    } else if (reportType === 'Table Wise') {
+      dataToExport = getTableReport().map(r => ({ Table: r.name, Orders: r.orders, Revenue: r.revenue }));
+    } else if (reportType === 'Dish Wise') {
+      dataToExport = dishReport.map(r => ({ Dish: r.name, QuantitySold: r.total_sold, Revenue: r.revenue }));
+    } else if (reportType === 'Payment Wise') {
+      dataToExport = getPaymentReport().map(r => ({ PaymentMethod: r.name, Orders: r.orders, Revenue: r.revenue }));
+    } else if (reportType === 'Time Wise') {
+      dataToExport = getTimeReport().map(r => ({ Time: r.name, Orders: r.orders, Revenue: r.revenue }));
+    }
+
+    const ws = XLSX.utils.json_to_sheet(dataToExport);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Report");
+    XLSX.writeFile(wb, `${reportType}_Report.xlsx`);
+  };
+
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Orders History & Reports</h1>
         <div className="flex gap-4">
-          {reportType === 'Order Wise' && (
-            <div className="flex gap-2">
-              <input 
-                type="date" 
-                value={dateRange.start} 
-                onChange={e => setDateRange({...dateRange, start: e.target.value})}
-                className="border-2 border-gray-200 rounded-lg px-2 py-1 text-sm outline-none"
-              />
-              <span className="self-center text-gray-500">to</span>
-              <input 
-                type="date" 
-                value={dateRange.end} 
-                onChange={e => setDateRange({...dateRange, end: e.target.value})}
-                className="border-2 border-gray-200 rounded-lg px-2 py-1 text-sm outline-none"
-              />
-            </div>
-          )}
+          <div className="flex gap-2">
+            <input 
+              type="date" 
+              value={dateRange.start} 
+              onChange={e => setDateRange({...dateRange, start: e.target.value})}
+              className="border-2 border-gray-200 rounded-lg px-2 py-1 text-sm outline-none"
+            />
+            <span className="self-center text-gray-500">to</span>
+            <input 
+              type="date" 
+              value={dateRange.end} 
+              onChange={e => setDateRange({...dateRange, end: e.target.value})}
+              className="border-2 border-gray-200 rounded-lg px-2 py-1 text-sm outline-none"
+            />
+          </div>
           <select 
             value={reportType}
             onChange={e => setReportType(e.target.value)}
@@ -219,6 +249,12 @@ const OrdersPage = () => {
             <option>Payment Wise</option>
             <option>Time Wise</option>
           </select>
+          <button 
+            onClick={handleExport}
+            className="bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700"
+          >
+            Export Excel
+          </button>
           <button 
             onClick={clearHistory}
             className="bg-red-50 text-red-600 border border-red-200 px-4 py-2 rounded-lg font-medium hover:bg-red-100"

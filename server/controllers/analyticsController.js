@@ -1,29 +1,52 @@
 const db = require('../db');
 
 const getComprehensiveAnalytics = (req, res) => {
-  const { dateRange } = req.query; // optional, can implement later
+  const start = req.query.start;
+  const end = req.query.end;
+
+  let timeFilter = "AND 1=1";
+  let params = [];
+  
+  if (start && end) {
+    timeFilter = "AND placed_at >= ? AND placed_at <= ?";
+    params = [`${start} 00:00:00`, `${end} 23:59:59`];
+  } else if (start) {
+    timeFilter = "AND placed_at >= ?";
+    params = [`${start} 00:00:00`];
+  } else if (end) {
+    timeFilter = "AND placed_at <= ?";
+    params = [`${end} 23:59:59`];
+  }
+
   const today = new Date().toISOString().split('T')[0];
-  const startOfDay = `${today} 00:00:00`;
+  const startOfDay = start ? `${start} 00:00:00` : `${today} 00:00:00`;
+  const endOfDay = end ? `${end} 23:59:59` : null;
 
   try {
-    // 1. High-Level Summary
+    // 1. High-Level Summary (All Time / Filtered Range)
     const summary = db.prepare(`
       SELECT 
         COUNT(*) as totalOrders,
         COALESCE(SUM(total_amount), 0) as revenue
       FROM orders
-      WHERE is_hidden = 0
-    `).get();
+      WHERE is_hidden = 0 ${timeFilter}
+    `).get(...params);
     summary.avgOrderValue = summary.totalOrders > 0 ? (summary.revenue / summary.totalOrders).toFixed(2) : 0;
 
-    // Today's summary
+    let todaySummaryParams = [startOfDay];
+    let todayFilter = "AND placed_at >= ?";
+    if (endOfDay) {
+      todayFilter += " AND placed_at <= ?";
+      todaySummaryParams.push(endOfDay);
+    }
+
     const todaySummary = db.prepare(`
       SELECT 
         COUNT(*) as totalOrders,
         COALESCE(SUM(total_amount), 0) as revenue
       FROM orders
-      WHERE is_hidden = 0 AND placed_at >= ?
-    `).get(startOfDay);
+      WHERE is_hidden = 0 ${todayFilter}
+    `).get(...todaySummaryParams);
 
     // 2. Payment Method Breakdown
     const paymentBreakdown = db.prepare(`
@@ -33,9 +56,7 @@ const getComprehensiveAnalytics = (req, res) => {
       GROUP BY payment_method
     `).all();
 
-    // 3. Profit & Margin Tracking (All time)
-    // Revenue is sum of oi.price * oi.quantity
-    // Cost is sum of m.cost_price * oi.quantity
+    // 3. Profit & Margin Tracking (All time or filtered)
     const profitData = db.prepare(`
       SELECT 
         COALESCE(SUM(oi.price * oi.quantity), 0) as grossSales,
@@ -43,8 +64,8 @@ const getComprehensiveAnalytics = (req, res) => {
       FROM order_items oi
       JOIN menu_items m ON oi.menu_item_id = m.id
       JOIN orders o ON oi.order_id = o.id
-      WHERE o.is_hidden = 0 AND o.status = 'billed'
-    `).get();
+      WHERE o.is_hidden = 0 AND o.status = 'billed' ${timeFilter.replace(/placed_at/g, 'o.placed_at')}
+    `).get(...params);
     profitData.netProfit = profitData.grossSales - profitData.totalCost;
 
     // Today Profit
@@ -55,8 +76,8 @@ const getComprehensiveAnalytics = (req, res) => {
       FROM order_items oi
       JOIN menu_items m ON oi.menu_item_id = m.id
       JOIN orders o ON oi.order_id = o.id
-      WHERE o.is_hidden = 0 AND o.status = 'billed' AND o.placed_at >= ?
-    `).get(startOfDay);
+      WHERE o.is_hidden = 0 AND o.status = 'billed' ${todayFilter.replace(/placed_at/g, 'o.placed_at')}
+    `).get(...todaySummaryParams);
     todayProfitData.netProfit = todayProfitData.grossSales - todayProfitData.totalCost;
 
     // 4. Dish Performance (Best & Least)
@@ -65,7 +86,7 @@ const getComprehensiveAnalytics = (req, res) => {
       FROM order_items oi
       JOIN menu_items m ON oi.menu_item_id = m.id
       JOIN orders o ON oi.order_id = o.id
-      WHERE o.is_hidden = 0
+      WHERE o.is_hidden = 0 ${timeFilter.replace(/placed_at/g, 'o.placed_at')}
       GROUP BY m.id
       ORDER BY total_sold DESC
     `).all();
@@ -79,7 +100,7 @@ const getComprehensiveAnalytics = (req, res) => {
       FROM order_items oi
       JOIN menu_items m ON oi.menu_item_id = m.id
       JOIN orders o ON oi.order_id = o.id
-      WHERE o.is_hidden = 0
+      WHERE o.is_hidden = 0 ${timeFilter.replace(/placed_at/g, 'o.placed_at')}
       GROUP BY m.category
       ORDER BY revenue DESC
     `).all();
@@ -109,10 +130,53 @@ const getComprehensiveAnalytics = (req, res) => {
     });
 
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error(error);
+    res.status(500).json({ success: false, message: 'Failed to fetch analytics' });
+  }
+};
+
+const getTopDishes = (req, res) => {
+  try {
+    const limit = req.query.limit ? parseInt(req.query.limit) : 10;
+    const start = req.query.start;
+    const end = req.query.end;
+
+    let query = `
+      SELECT m.name, SUM(oi.quantity) as total_sold, COALESCE(SUM(oi.price * oi.quantity), 0) as revenue
+      FROM order_items oi
+      JOIN menu_items m ON oi.menu_item_id = m.id
+      JOIN orders o ON oi.order_id = o.id
+      WHERE o.is_hidden = 0
+    `;
+    const params = [];
+
+    if (start) {
+      query += ` AND o.placed_at >= ?`;
+      params.push(`${start} 00:00:00`);
+    }
+    if (end) {
+      // Inclusive of the end date
+      query += ` AND o.placed_at <= ?`;
+      params.push(`${end} 23:59:59`);
+    }
+
+    query += `
+      GROUP BY m.id
+      ORDER BY total_sold DESC
+      LIMIT ?
+    `;
+    params.push(limit);
+
+    const dishPerformance = db.prepare(query).all(...params);
+    
+    res.json({ success: true, data: dishPerformance });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ success: false, message: 'Failed to fetch top dishes' });
   }
 };
 
 module.exports = {
-  getComprehensiveAnalytics
+  getComprehensiveAnalytics,
+  getTopDishes
 };

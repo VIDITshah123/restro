@@ -10,19 +10,19 @@ const getVariants = (req, res) => {
 // ── Create variant ────────────────────────────────────────────────────────────
 const createVariant = (req, res) => {
   const { id } = req.params; // menu_item_id
-  const { name, price } = req.body;
+  const { name, price, cost_price } = req.body;
   if (!name || price === undefined) {
     return res.status(400).json({ success: false, message: 'name and price required' });
   }
-  const info = db.prepare('INSERT INTO menu_item_variants (menu_item_id, name, price) VALUES (?, ?, ?)').run(id, name, price);
+  const info = db.prepare('INSERT INTO menu_item_variants (menu_item_id, name, price, cost_price) VALUES (?, ?, ?, ?)').run(id, name, price, cost_price || 0);
   res.json({ success: true, data: { id: info.lastInsertRowid } });
 };
 
 // ── Update variant ────────────────────────────────────────────────────────────
 const updateVariant = (req, res) => {
   const { variantId } = req.params;
-  const { name, price } = req.body;
-  db.prepare('UPDATE menu_item_variants SET name=?, price=? WHERE id=?').run(name, price, variantId);
+  const { name, price, cost_price } = req.body;
+  db.prepare('UPDATE menu_item_variants SET name=?, price=?, cost_price=? WHERE id=?').run(name, price, cost_price || 0, variantId);
   res.json({ success: true });
 };
 
@@ -35,7 +35,7 @@ const deleteVariant = (req, res) => {
 
 // ── Get full menu with variants ───────────────────────────────────────────────
 const getMenuWithVariants = (req, res) => {
-  const items = db.prepare('SELECT * FROM menu_items ORDER BY category, name').all();
+  const items = db.prepare('SELECT * FROM menu_items WHERE is_hidden = 0 ORDER BY category, name').all();
   const variants = db.prepare('SELECT * FROM menu_item_variants ORDER BY price ASC').all();
 
   // Attach variants to their parent items

@@ -63,6 +63,7 @@ app.post('/api/auth/logout', authenticate, authController.logout);
 app.get('/api/menu', variantController.getMenuWithVariants);
 app.get('/api/menu/categories', menuController.getCategories);
 app.post('/api/menu/categories/order', authenticate, authorize('admin'), menuController.updateCategoryOrder);
+app.post('/api/menu/bulk', authenticate, authorize('admin'), menuController.bulkImportMenu);
 app.post('/api/menu', authenticate, authorize('admin'), menuController.createMenuItem);
 app.put('/api/menu/:id', authenticate, authorize('admin'), menuController.updateMenuItem);
 app.delete('/api/menu/:id', authenticate, authorize('admin'), menuController.deleteMenuItem);
@@ -97,6 +98,7 @@ app.delete('/api/kot/history/clear', authenticate, authorize('admin'), orderCont
 
 // Analytics
 app.get('/api/analytics/comprehensive', authenticate, authorize('admin'), analyticsController.getComprehensiveAnalytics);
+app.get('/api/analytics/top-dishes', authenticate, authorize('admin'), analyticsController.getTopDishes);
 
 // Waiters (Admin CRUD)
 app.post('/api/auth/waiter-login', waiterController.waiterLogin);

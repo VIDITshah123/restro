@@ -8,20 +8,29 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 const AnalyticsPage = () => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [dateRange, setDateRange] = useState({ start: '', end: '' });
+
+  const fetchAnalytics = async () => {
+    try {
+      setLoading(true);
+      let url = '/analytics/comprehensive';
+      const params = new URLSearchParams();
+      if (dateRange.start) params.append('start', dateRange.start);
+      if (dateRange.end) params.append('end', dateRange.end);
+      if (params.toString()) url += `?${params.toString()}`;
+      
+      const res = await api.get(url);
+      setData(res.data.data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchAnalytics = async () => {
-      try {
-        const res = await api.get('/analytics/comprehensive');
-        setData(res.data.data);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchAnalytics();
-  }, []);
+  }, [dateRange]);
 
   const exportCSV = (filename, rows) => {
     if (!rows || !rows.length) return;
@@ -66,6 +75,22 @@ const AnalyticsPage = () => {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Reports & Analytics Hub</h1>
         <div className="flex gap-4">
+          <div className="flex items-center gap-2 border bg-white px-3 py-1 rounded-lg shadow-sm">
+            <span className="text-sm font-medium text-gray-500">From</span>
+            <input 
+              type="date" 
+              value={dateRange.start}
+              onChange={e => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+              className="text-sm outline-none"
+            />
+            <span className="text-sm font-medium text-gray-500 ml-2">To</span>
+            <input 
+              type="date" 
+              value={dateRange.end}
+              onChange={e => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+              className="text-sm outline-none"
+            />
+          </div>
           <button onClick={downloadSummaryReport} className="flex items-center gap-2 border bg-white px-4 py-2 rounded-lg font-medium hover:bg-gray-50">
             <Download size={18} /> Summary Report
           </button>
@@ -78,15 +103,15 @@ const AnalyticsPage = () => {
       {/* KPI Cards */}
       <div className="grid grid-cols-4 gap-6 mb-8">
         <div className="bg-white p-6 rounded-xl border shadow-sm">
-          <p className="text-gray-500 font-medium mb-1 flex items-center gap-2"><DollarSign size={18}/> Today's Revenue</p>
+          <p className="text-gray-500 font-medium mb-1 flex items-center gap-2"><DollarSign size={18}/> Selected Period Revenue</p>
           <h3 className="text-3xl font-black">₹{data.todaySummary.revenue}</h3>
         </div>
         <div className="bg-white p-6 rounded-xl border shadow-sm">
-          <p className="text-gray-500 font-medium mb-1 flex items-center gap-2"><ShoppingBag size={18}/> Today's Orders</p>
+          <p className="text-gray-500 font-medium mb-1 flex items-center gap-2"><ShoppingBag size={18}/> Selected Period Orders</p>
           <h3 className="text-3xl font-black">{data.todaySummary.totalOrders}</h3>
         </div>
         <div className="bg-white p-6 rounded-xl border shadow-sm">
-          <p className="text-gray-500 font-medium mb-1 flex items-center gap-2"><TrendingUp size={18}/> Net Profit (All Time)</p>
+          <p className="text-gray-500 font-medium mb-1 flex items-center gap-2"><TrendingUp size={18}/> Net Profit</p>
           <h3 className="text-3xl font-black text-green-600">₹{data.profitData.netProfit}</h3>
         </div>
         <div className="bg-white p-6 rounded-xl border shadow-sm">
