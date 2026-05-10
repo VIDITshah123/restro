@@ -15,6 +15,8 @@ const MenuManagementPage = () => {
   const [variantForm, setVariantForm] = useState({ name: '', price: '', cost_price: '' });
   const [sortOption, setSortOption] = useState('Default');
   const [showComboBuilder, setShowComboBuilder] = useState(false);
+  // comboSelections: { [menuItemId]: { selected: bool, variantIds: Set<number> } }
+  const [comboSelections, setComboSelections] = useState({});
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
   const [filterType, setFilterType] = useState('All');
@@ -76,11 +78,54 @@ const MenuManagementPage = () => {
     setFormData(prev => ({ ...prev, tags: prev.tags.filter(t => t !== tagToRemove) }));
   };
 
+  // Build description + cost from comboSelections
+  const buildComboState = (selections, menuList) => {
+    const lines = [];
+    let totalCost = 0;
+    for (const [itemId, sel] of Object.entries(selections)) {
+      if (!sel.selected) continue;
+      const mi = menuList.find(m => m.id === parseInt(itemId));
+      if (!mi) continue;
+      totalCost += parseFloat(mi.cost_price) || 0;
+      const selectedVariants = mi.variants?.filter(v => sel.variantIds.has(v.id)) || [];
+      if (selectedVariants.length === 0) {
+        lines.push(`- 1x ${mi.name}`);
+      } else {
+        const varNames = selectedVariants.map(v => v.name).join(' & ');
+        totalCost += selectedVariants.reduce((s, v) => s + (parseFloat(v.cost_price) || 0), 0);
+        lines.push(`- 1x ${mi.name} (${varNames})`);
+      }
+    }
+    return { description: lines.join('\n'), cost_price: totalCost };
+  };
+
+  // Parse an existing description into comboSelections
+  const parseDescriptionToSelections = (description, menuList) => {
+    const selections = {};
+    const lines = (description || '').split('\n').map(l => l.trim()).filter(l => l.startsWith('- '));
+    for (const line of lines) {
+      // Match: - 1x ItemName (Addon1 & Addon2) or - 1x ItemName
+      const match = line.match(/^- 1x (.+?)(?:\s*\((.+)\))?$/);
+      if (!match) continue;
+      const [, itemName, variantStr] = match;
+      const mi = menuList.find(m => m.name === itemName);
+      if (!mi) continue;
+      const variantNames = variantStr ? variantStr.split(' & ').map(s => s.trim()) : [];
+      const variantIds = new Set(
+        (mi.variants || []).filter(v => variantNames.includes(v.name)).map(v => v.id)
+      );
+      selections[mi.id] = { selected: true, variantIds };
+    }
+    return selections;
+  };
+
   const handleOpenModal = (item = null, isCombo = false) => {
-    setShowComboBuilder(isCombo);
+    const isEditingCombo = item && item.category === 'Combo Meals';
+    const willShowCombo = isCombo || isEditingCombo;
+    setShowComboBuilder(willShowCombo);
     if (item) {
       setEditingItem(item);
-      setFormData({
+      const parsed = {
         name: item.name,
         description: item.description || '',
         price: item.price,
@@ -90,14 +135,19 @@ const MenuManagementPage = () => {
         is_veg: item.is_veg,
         is_available: item.is_available,
         tags: item.tags ? (typeof item.tags === 'string' ? JSON.parse(item.tags) : item.tags) : []
-      });
+      };
+      setFormData(parsed);
       setImagePreview(item.image_url || null);
+      if (willShowCombo) {
+        setComboSelections(parseDescriptionToSelections(item.description || '', menu));
+      }
     } else {
       setEditingItem(null);
       setFormData({
         name: '', description: '', price: '', cost_price: '', category: isCombo ? 'Combo Meals' : '', image_url: '', is_veg: 1, is_available: 1, tags: []
       });
       setImagePreview(null);
+      setComboSelections({});
     }
     setImageFile(null);
     setTagInput('');
@@ -520,43 +570,113 @@ const MenuManagementPage = () => {
                 <label className={labelCls}>Description</label>
                 <textarea rows="2" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className={inputCls}></textarea>
               </div>
-              {showComboBuilder && (
-                <div className="bg-amber-500/5 border border-amber-500/20 p-4 rounded-xl space-y-2">
-                  <h3 className="font-bold text-amber-400 text-xs uppercase tracking-widest">Combo Builder</h3>
-                  <div className="max-h-48 overflow-y-auto space-y-2 pr-1">
-                    {menu.filter(m => m.is_available && m.category !== 'Combo Meals' && m.is_veg === formData.is_veg).map(mi => (
-                      <div key={mi.id} className="border-b border-white/5 pb-2 last:border-0">
-                        <label className="flex items-center gap-2 cursor-pointer text-sm p-1 hover:bg-white/5 rounded-lg">
-                          <input type="checkbox" onChange={(e) => {
-                            const cost = parseFloat(mi.cost_price) || 0; const nameText = `1x ${mi.name}`;
-                            let newCost = parseFloat(formData.cost_price) || 0; let newDesc = formData.description || '';
-                            if (e.target.checked) { newCost += cost; newDesc = newDesc ? `${newDesc}\n- ${nameText}` : `- ${nameText}`; }
-                            else { newCost -= cost; newDesc = newDesc.replace(`- ${nameText}`, '').replace(/\n\n/g, '\n').trim(); }
-                            setFormData({...formData, cost_price: Math.max(0, newCost), description: newDesc});
-                          }} className="accent-amber-500" />
-                          <span className="font-medium text-gray-300">{mi.name}</span> <span className="text-gray-600 text-xs">(Cost: ₹{mi.cost_price || 0})</span>
-                        </label>
-                        {mi.variants?.length > 0 && (
-                          <div className="ml-6 mt-1 space-y-1">
-                            {mi.variants.map(v => (
-                              <label key={v.id} className="flex items-center gap-2 cursor-pointer text-xs p-1 hover:bg-white/5 rounded-lg text-gray-500">
-                                <input type="checkbox" onChange={(e) => {
-                                  const cost = parseFloat(v.cost_price) || 0; const nameText = `1x ${mi.name} (${v.name})`;
-                                  let newCost = parseFloat(formData.cost_price) || 0; let newDesc = formData.description || '';
-                                  if (e.target.checked) { newCost += cost; newDesc = newDesc ? `${newDesc}\n- ${nameText}` : `- ${nameText}`; }
-                                  else { newCost -= cost; newDesc = newDesc.replace(`- ${nameText}`, '').replace(/\n\n/g, '\n').trim(); }
-                                  setFormData({...formData, cost_price: Math.max(0, newCost), description: newDesc});
-                                }} className="accent-amber-400" />
-                                {v.name} <span className="text-gray-600">(Cost: ₹{v.cost_price || 0})</span>
-                              </label>
-                            ))}
-                          </div>
+              {showComboBuilder && (() => {
+                const availableItems = menu.filter(m => m.is_available && m.category !== 'Combo Meals' && m.is_veg === formData.is_veg);
+                const selectedCount = Object.values(comboSelections).filter(s => s.selected).length;
+
+                const updateSelections = (newSel) => {
+                  setComboSelections(newSel);
+                  const { description, cost_price } = buildComboState(newSel, menu);
+                  setFormData(prev => ({ ...prev, description, cost_price }));
+                };
+
+                return (
+                  <div className="border border-amber-500/20 rounded-2xl overflow-hidden">
+                    {/* Header */}
+                    <div className="bg-amber-500/10 px-4 py-3 flex items-center justify-between border-b border-amber-500/20">
+                      <div className="flex items-center gap-2">
+                        <span className="text-amber-400 font-black text-sm uppercase tracking-widest">Combo Builder</span>
+                        {selectedCount > 0 && (
+                          <span className="bg-amber-500 text-black text-[10px] font-black px-2 py-0.5 rounded-full">{selectedCount} item{selectedCount !== 1 ? 's' : ''}</span>
                         )}
                       </div>
-                    ))}
+                      <span className="text-xs text-gray-600">Select items &amp; addons</span>
+                    </div>
+
+                    {/* Item list */}
+                    <div className="divide-y divide-white/5 max-h-72 overflow-y-auto">
+                      {availableItems.map(mi => {
+                        const sel = comboSelections[mi.id] || { selected: false, variantIds: new Set() };
+                        const hasVariants = mi.variants?.length > 0;
+
+                        const toggleItem = (checked) => {
+                          const newSel = { ...comboSelections, [mi.id]: { selected: checked, variantIds: new Set() } };
+                          if (!checked) delete newSel[mi.id];
+                          updateSelections(newSel);
+                        };
+
+                        const toggleVariant = (variantId, checked) => {
+                          const current = comboSelections[mi.id] || { selected: true, variantIds: new Set() };
+                          const newVariantIds = new Set(current.variantIds);
+                          if (checked) newVariantIds.add(variantId);
+                          else newVariantIds.delete(variantId);
+                          const newSel = { ...comboSelections, [mi.id]: { selected: true, variantIds: newVariantIds } };
+                          updateSelections(newSel);
+                        };
+
+                        return (
+                          <div key={mi.id} className={`transition-colors ${ sel.selected ? 'bg-amber-500/5' : 'hover:bg-white/[0.02]' }`}>
+                            {/* Item row */}
+                            <label className="flex items-center gap-3 px-4 py-3 cursor-pointer">
+                              <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all ${
+                                sel.selected ? 'bg-amber-500 border-amber-500' : 'border-white/20 hover:border-amber-500/50'
+                              }`}>
+                                {sel.selected && <span className="text-black text-xs font-black">✓</span>}
+                              </div>
+                              <input type="checkbox" checked={!!sel.selected} onChange={e => toggleItem(e.target.checked)} className="hidden" />
+                              <div className="flex-1 min-w-0">
+                                <span className={`font-bold text-sm ${ sel.selected ? 'text-gray-100' : 'text-gray-400' }`}>{mi.name}</span>
+                                {sel.selected && sel.variantIds.size > 0 && (
+                                  <span className="ml-2 text-amber-400/70 text-xs">
+                                    + {[...sel.variantIds].map(vid => mi.variants?.find(v => v.id === vid)?.name).filter(Boolean).join(' & ')}
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-xs text-gray-600 shrink-0">₹{mi.cost_price || 0}</span>
+                            </label>
+
+                            {/* Variant pills — shown only when item is selected AND has variants */}
+                            {sel.selected && hasVariants && (
+                              <div className="px-4 pb-3 pt-0 flex flex-wrap gap-2 ml-8">
+                                <span className="text-[10px] text-gray-600 uppercase tracking-wider self-center mr-1">Addon:</span>
+                                {mi.variants.map(v => {
+                                  const isVChecked = sel.variantIds.has(v.id);
+                                  return (
+                                    <button
+                                      key={v.id}
+                                      type="button"
+                                      onClick={() => toggleVariant(v.id, !isVChecked)}
+                                      className={`px-3 py-1 rounded-full text-xs font-bold border transition-all ${
+                                        isVChecked
+                                          ? 'bg-amber-500/20 border-amber-500/40 text-amber-400'
+                                          : 'bg-white/5 border-white/10 text-gray-500 hover:border-amber-500/30 hover:text-gray-300'
+                                      }`}
+                                    >
+                                      {v.name}
+                                      {isVChecked && <span className="ml-1 text-amber-600">+₹{v.cost_price || 0}</span>}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Preview of description */}
+                    {selectedCount > 0 && (
+                      <div className="px-4 py-3 bg-black/40 border-t border-white/5">
+                        <p className="text-[10px] text-gray-600 uppercase tracking-wider mb-1">Preview</p>
+                        {formData.description.split('\n').filter(Boolean).map((line, i) => (
+                          <p key={i} className="text-xs text-amber-400/80 font-mono">{line}</p>
+                        ))}
+                        <p className="text-[10px] text-gray-600 mt-1">Est. cost: ₹{formData.cost_price}</p>
+                      </div>
+                    )}
                   </div>
-                </div>
-              )}
+                );
+              })()}
               <div>
                 <label className={labelCls}>Image</label>
                 <div onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}
