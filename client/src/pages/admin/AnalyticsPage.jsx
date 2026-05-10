@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../../api';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Download, TrendingUp, TrendingDown, DollarSign, ShoppingBag } from 'lucide-react';
+import { Download, TrendingUp, TrendingDown, IndianRupee, ShoppingBag } from 'lucide-react';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
@@ -103,7 +103,7 @@ const AnalyticsPage = () => {
       {/* KPI Cards */}
       <div className="grid grid-cols-4 gap-6 mb-8">
         <div className="bg-white p-6 rounded-xl border shadow-sm">
-          <p className="text-gray-500 font-medium mb-1 flex items-center gap-2"><DollarSign size={18}/> Selected Period Revenue</p>
+          <p className="text-gray-500 font-medium mb-1 flex items-center gap-2"><IndianRupee size={18}/> Selected Period Revenue</p>
           <h3 className="text-3xl font-black">₹{data.todaySummary.revenue}</h3>
         </div>
         <div className="bg-white p-6 rounded-xl border shadow-sm">

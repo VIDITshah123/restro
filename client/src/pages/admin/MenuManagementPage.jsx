@@ -15,6 +15,9 @@ const MenuManagementPage = () => {
   const [variantForm, setVariantForm] = useState({ name: '', price: '', cost_price: '' });
   const [sortOption, setSortOption] = useState('Default');
   const [showComboBuilder, setShowComboBuilder] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterCategory, setFilterCategory] = useState('');
+  const [filterType, setFilterType] = useState('All');
   
   const [formData, setFormData] = useState({
     name: '',
@@ -201,7 +204,16 @@ const MenuManagementPage = () => {
     }
   };
 
-  const sortedMenu = [...menu].sort((a, b) => {
+  const filteredMenu = menu.filter(item => {
+    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = filterCategory === '' || item.category === filterCategory;
+    const matchesType = filterType === 'All' 
+                        ? true 
+                        : filterType === 'Veg' ? item.is_veg === 1 : item.is_veg === 0;
+    return matchesSearch && matchesCategory && matchesType;
+  });
+
+  const sortedMenu = [...filteredMenu].sort((a, b) => {
     if (sortOption === 'Price (Low to High)') return a.price - b.price;
     if (sortOption === 'Price (High to Low)') return b.price - a.price;
     if (sortOption === 'Category (A-Z)') return a.category.localeCompare(b.category);
@@ -362,6 +374,33 @@ const MenuManagementPage = () => {
             + Add New Item
           </button>
         </div>
+      </div>
+
+      <div className="flex flex-wrap gap-4 mb-6 bg-white p-4 rounded-xl shadow-sm border items-center">
+        <input 
+          type="text" 
+          placeholder="Search by name..." 
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="flex-1 min-w-[200px] border p-2 rounded-lg text-sm bg-white outline-none"
+        />
+        <select 
+          value={filterCategory} 
+          onChange={(e) => setFilterCategory(e.target.value)}
+          className="border p-2 rounded-lg text-sm bg-white outline-none"
+        >
+          <option value="">All Categories</option>
+          {categories.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+        <select 
+          value={filterType} 
+          onChange={(e) => setFilterType(e.target.value)}
+          className="border p-2 rounded-lg text-sm bg-white outline-none"
+        >
+          <option value="All">All Types</option>
+          <option value="Veg">Veg Only</option>
+          <option value="Non-Veg">Non-Veg Only</option>
+        </select>
       </div>
       
       <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
