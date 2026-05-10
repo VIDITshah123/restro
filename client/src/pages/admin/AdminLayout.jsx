@@ -33,7 +33,8 @@ const AdminLayout = () => {
     window.addEventListener('storage', checkRequests);
     window.addEventListener('billRequestsUpdated', checkRequests);
 
-    const socket = io('http://localhost:3000/admin');
+    const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    const socket = io(`${SOCKET_URL}/admin`);
     socket.on('notification:bill_request', (data) => {
       try {
         const stored = localStorage.getItem('billRequestedTables');

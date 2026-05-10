@@ -122,7 +122,8 @@ const MenuPage = () => {
   useEffect(() => {
     if (!showBillPopup || !tableId) return;
 
-    const socket = io('http://localhost:3000/customer');
+    const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    const socket = io(`${SOCKET_URL}/customer`);
     socket.emit('join:table', { tableId });
 
     socket.on('kot:statusUpdate', ({ orderId, newStatus }) => {

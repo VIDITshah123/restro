@@ -33,7 +33,8 @@ const WaiterDashboard = () => {
 
   useEffect(() => {
     fetchTables();
-    const socket = io('http://localhost:3000/waiter');
+    const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    const socket = io(`${SOCKET_URL}/waiter`);
 
     socket.on('order:ready', (data) => {
       setReadyOrders(prev => {
