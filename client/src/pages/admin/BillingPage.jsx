@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { io } from 'socket.io-client';
 import api from '../../api';
-import { toIST, toISTFull } from '../../lib/utils';
+import { toISTFull } from '../../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bell, X } from 'lucide-react';
+import { Bell, X, Receipt, Loader2 } from 'lucide-react';
 
 const BillingPage = () => {
   const [tables, setTables] = useState([]);
@@ -13,16 +13,11 @@ const BillingPage = () => {
   const [notifications, setNotifications] = useState([]);
   const [paymentMethod, setPaymentMethod] = useState('Cash');
   const [sortOption, setSortOption] = useState('Table (Asc)');
-  
+
   const loadBillRequests = () => {
-    try {
-      const stored = localStorage.getItem('billRequestedTables');
-      return stored ? new Set(JSON.parse(stored)) : new Set();
-    } catch {
-      return new Set();
-    }
+    try { return new Set(JSON.parse(localStorage.getItem('billRequestedTables') || '[]')); }
+    catch { return new Set(); }
   };
-  
   const [billRequestedTables, setBillRequestedTables] = useState(loadBillRequests);
 
   const persistBillRequests = (tableSet) => {
@@ -33,41 +28,27 @@ const BillingPage = () => {
   const addNotification = (message) => {
     const id = Date.now();
     setNotifications(prev => [...prev, { id, message }]);
-    setTimeout(() => {
-      setNotifications(prev => prev.filter(n => n.id !== id));
-    }, 4000);
-  };
-
-  const removeNotification = (id) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
+    setTimeout(() => setNotifications(prev => prev.filter(n => n.id !== id)), 4000);
   };
 
   useEffect(() => {
     fetchTables();
-
     const socket = io('http://localhost:3000/admin');
     socket.on('notification:bill_request', (data) => {
       setBillRequestedTables(prev => {
         const next = new Set(prev);
         next.add(data.tableId || data.tableNumber);
-        persistBillRequests(next);
-        return next;
+        persistBillRequests(next); return next;
       });
       addNotification(`Table ${data.tableNumber || data.tableId} requested bill!`);
     });
-
     socket.on('table:statusChanged', (data) => {
       setTables(prev => {
         const existing = prev.find(t => t.id === data.tableId);
-        if (existing) {
-          return prev.map(t => t.id === data.tableId ? { ...t, is_occupied: data.isOccupied } : t);
-        } else {
-          fetchTables();
-          return prev;
-        }
+        if (existing) return prev.map(t => t.id === data.tableId ? { ...t, is_occupied: data.isOccupied } : t);
+        fetchTables(); return prev;
       });
     });
-
     return () => socket.disconnect();
   }, []);
 
@@ -76,197 +57,187 @@ const BillingPage = () => {
       const res = await api.get('/tables');
       const fetchedTables = res.data.data;
       setTables(fetchedTables);
-      
       setBillRequestedTables(prev => {
         const occupiedIds = new Set(fetchedTables.filter(t => t.is_occupied).map(t => t.id));
         const occupiedNames = new Set(fetchedTables.filter(t => t.is_occupied).map(t => t.table_number));
         const next = new Set([...prev].filter(id => occupiedIds.has(id) || occupiedNames.has(id)));
-        if (next.size !== prev.size) {
-          persistBillRequests(next);
-        }
+        if (next.size !== prev.size) persistBillRequests(next);
         return next;
       });
-    } catch (err) {
-      console.error(err);
-    }
+    } catch (err) { console.error(err); }
   };
 
   const fetchBilling = async (tableId) => {
-    setLoading(true);
-    setSelectedTable(tableId);
-    try {
-      const res = await api.get(`/billing/${tableId}`);
-      setBilling(res.data.data);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+    setLoading(true); setSelectedTable(tableId);
+    try { const res = await api.get(`/billing/${tableId}`); setBilling(res.data.data); }
+    catch (err) { console.error(err); }
+    finally { setLoading(false); }
   };
 
   const handleGenerateBill = async () => {
     if (!selectedTable) return;
-    if (!confirm(`Generate bill? Payment method: ${paymentMethod}`)) return;
+    if (!confirm(`Generate bill? Payment: ${paymentMethod}`)) return;
     try {
       await api.post(`/billing/${selectedTable}/generate`, { payment_method: paymentMethod });
       setBillRequestedTables(prev => {
-        const next = new Set(prev);
-        next.delete(selectedTable);
-        persistBillRequests(next);
-        return next;
+        const next = new Set(prev); next.delete(selectedTable); persistBillRequests(next); return next;
       });
-      setBilling(null);
-      setSelectedTable(null);
-      fetchTables();
+      setBilling(null); setSelectedTable(null); fetchTables();
       alert('Bill generated! Table is now free.');
-    } catch (err) {
-      alert('Error generating bill');
-    }
+    } catch (err) { alert('Error generating bill'); }
   };
 
   let occupiedTables = tables.filter(t => t.is_occupied);
-  if (sortOption === 'Table (Asc)') {
-    occupiedTables.sort((a,b) => a.table_number.localeCompare(b.table_number, undefined, {numeric: true}));
-  } else if (sortOption === 'Table (Desc)') {
-    occupiedTables.sort((a,b) => b.table_number.localeCompare(a.table_number, undefined, {numeric: true}));
-  }
+  if (sortOption === 'Table (Asc)') occupiedTables.sort((a, b) => a.table_number.localeCompare(b.table_number, undefined, { numeric: true }));
+  else occupiedTables.sort((a, b) => b.table_number.localeCompare(a.table_number, undefined, { numeric: true }));
 
   return (
-    <div className="p-6 flex gap-6 h-full min-h-screen">
+    <div className="p-8 flex gap-6 min-h-screen bg-[#0a0a0a] text-gray-200">
+
+      {/* Left Panel - Table List */}
       <div className="w-64 shrink-0">
-        <div className="flex justify-between items-center mb-4">
-          <h1 className="text-2xl font-bold">Billing</h1>
-          <select 
-            value={sortOption} 
-            onChange={e => setSortOption(e.target.value)}
-            className="border p-1 rounded text-sm bg-gray-50 outline-none"
-          >
-            <option>Table (Asc)</option>
-            <option>Table (Desc)</option>
-          </select>
-        </div>
-        <p className="text-sm text-gray-500 mb-4">Select an occupied table to view and generate their bill.</p>
-        
-        {occupiedTables.length === 0 ? (
-          <div className="bg-gray-50 rounded-xl p-6 text-center text-gray-400">
-            <p className="text-3xl mb-2">🎉</p>
-            <p className="font-medium">No occupied tables</p>
+        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
+          <div className="flex justify-between items-center mb-3">
+            <h1 className="text-3xl font-serif font-black bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-600 bg-clip-text text-transparent tracking-tight">
+              Billing
+            </h1>
           </div>
-        ) : (
-          <div className="space-y-2">
-            {occupiedTables.map(table => {
-              const isRequested = billRequestedTables.has(table.id) || billRequestedTables.has(table.table_number);
-              return (
-                <button
-                  key={table.id}
-                  onClick={() => fetchBilling(table.id)}
-                  className={`w-full text-left px-4 py-3 rounded-xl border-2 transition-all font-bold relative ${
-                    selectedTable === table.id
-                      ? 'bg-black text-white border-black'
-                      : isRequested
-                        ? 'bg-yellow-50 border-yellow-400 text-yellow-800 animate-pulse'
-                        : 'bg-white border-gray-200 hover:border-gray-400'
-                  }`}
-                >
-                  {table.table_number}
-                  {isRequested && (
-                    <span className="absolute top-1 right-2 text-xs bg-red-500 text-white px-2 py-0.5 rounded-full font-bold animate-pulse">
-                      Bill Requested!
-                    </span>
-                  )}
-                  <span className="block text-xs font-normal opacity-60">Tap to view bill</span>
-                </button>
-              );
-            })}
+          <div className="mb-4">
+            <select value={sortOption} onChange={e => setSortOption(e.target.value)} className="w-full bg-[#0f0f0f] border border-white/10 text-gray-400 text-xs rounded-xl px-3 py-2 outline-none uppercase tracking-wider">
+              <option>Table (Asc)</option>
+              <option>Table (Desc)</option>
+            </select>
           </div>
-        )}
+          <p className="text-xs text-gray-600 mb-4 uppercase tracking-wider">Select an occupied table to view and generate their bill.</p>
+
+          {occupiedTables.length === 0 ? (
+            <div className="bg-[#0f0f0f] border border-white/5 rounded-2xl p-6 text-center">
+              <p className="text-3xl mb-2">🎉</p>
+              <p className="text-gray-600 text-sm uppercase tracking-widest">No occupied tables</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {occupiedTables.map(table => {
+                const isRequested = billRequestedTables.has(table.id) || billRequestedTables.has(table.table_number);
+                const isSelected = selectedTable === table.id;
+                return (
+                  <button
+                    key={table.id}
+                    onClick={() => fetchBilling(table.id)}
+                    className={`w-full text-left px-4 py-3.5 rounded-2xl border-2 transition-all font-bold relative text-sm ${
+                      isSelected
+                        ? 'bg-amber-500/10 border-amber-500/40 text-amber-400 shadow-[0_0_15px_rgba(251,191,36,0.1)]'
+                        : isRequested
+                          ? 'bg-red-500/10 border-red-500/30 text-red-300 animate-pulse'
+                          : 'bg-[#0f0f0f] border-white/5 text-gray-300 hover:border-white/20 hover:text-gray-100'
+                    }`}
+                  >
+                    {table.table_number}
+                    {isRequested && (
+                      <span className="absolute top-2 right-2 text-[10px] bg-red-500 text-white px-2 py-0.5 rounded-full font-black uppercase tracking-wider">
+                        Bill!
+                      </span>
+                    )}
+                    <span className="block text-xs font-normal opacity-50 mt-0.5">Tap to view bill</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </motion.div>
       </div>
 
+      {/* Right Panel - Bill Detail */}
       <div className="flex-1">
-        {!selectedTable && (
-          <div className="h-full flex items-center justify-center text-gray-300">
+        {!selectedTable && !loading && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-full flex items-center justify-center">
             <div className="text-center">
-              <p className="text-6xl mb-4">🧾</p>
-              <p className="font-bold text-xl">Select a table to view bill</p>
+              <Receipt size={56} className="text-gray-800 mx-auto mb-4" strokeWidth={1} />
+              <p className="font-serif text-gray-600 text-lg italic">Select a table to view bill</p>
             </div>
-          </div>
+          </motion.div>
         )}
 
         {loading && (
-          <div className="h-full flex items-center justify-center text-gray-400">
-            <p className="font-medium">Loading bill...</p>
+          <div className="h-full flex items-center justify-center">
+            <Loader2 size={32} className="text-amber-500/40 animate-spin" />
           </div>
         )}
 
-        {billing && !loading && (
-          <div className="bg-white rounded-2xl border shadow-sm p-6">
-            <div className="flex justify-between items-start mb-6">
-              <div>
-                <h2 className="text-xl font-bold">{tables.find(t => t.id === selectedTable)?.table_number}</h2>
-                <p className="text-gray-500 text-sm">{billing.orders.length} order(s) in session</p>
-              </div>
-              <div className="flex gap-4 items-center">
-                <select 
-                  value={paymentMethod}
-                  onChange={e => setPaymentMethod(e.target.value)}
-                  className="border-2 border-gray-200 rounded-lg px-4 py-2 font-bold outline-none"
-                >
-                  <option value="Cash">Cash</option>
-                  <option value="Online">Online / UPI</option>
-                  <option value="Card">Card</option>
-                </select>
-                <button
-                  onClick={handleGenerateBill}
-                  disabled={billing.orders.length === 0}
-                  className="bg-black text-white font-bold px-6 py-2 rounded-xl disabled:opacity-40"
-                >
-                  Generate Bill
-                </button>
-              </div>
-            </div>
-
-            {billing.orders.length === 0 ? (
-              <p className="text-gray-400 text-center py-8">No pending orders for this table.</p>
-            ) : (
-              <div className="space-y-4">
-                {billing.orders.map((order, idx) => (
-                  <div key={order.id} className="border rounded-xl overflow-hidden">
-                    <div className="bg-gray-50 px-4 py-2 flex justify-between text-sm font-semibold text-gray-600">
-                      <span>Order #{order.id} — {order.customer_name || 'Guest'}</span>
-                      <span>{toISTFull(order.placed_at)}</span>
-                    </div>
-                    <table className="w-full text-sm">
-                      <tbody className="divide-y">
-                        {order.items.map(item => (
-                          <tr key={item.id}>
-                            <td className="px-4 py-2">
-                              <span className={`inline-block w-2 h-2 rounded-full mr-2 ${item.is_veg ? 'bg-green-500' : 'bg-red-500'}`}></span>
-                              {item.name}
-                              {item.special_notes ? (
-                                <span className="ml-2 text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded font-bold">{item.special_notes}</span>
-                              ) : null}
-                            </td>
-                            <td className="px-4 py-2 text-center text-gray-500">x{item.quantity}</td>
-                            <td className="px-4 py-2 text-right font-medium">₹{item.price * item.quantity}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                    <div className="px-4 py-2 bg-gray-50 flex justify-between text-sm font-bold border-t">
-                      <span>Subtotal</span>
-                      <span>₹{order.total_amount}</span>
-                    </div>
-                  </div>
-                ))}
-
-                <div className="border-2 border-black rounded-xl px-6 py-4 flex justify-between items-center">
-                  <span className="text-lg font-bold">Grand Total</span>
-                  <span className="text-3xl font-black">₹{billing.grandTotal}</span>
+        <AnimatePresence mode="wait">
+          {billing && !loading && (
+            <motion.div
+              key={selectedTable}
+              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              className="bg-[#0f0f0f] border border-white/5 rounded-2xl p-6"
+            >
+              <div className="flex justify-between items-start mb-6">
+                <div>
+                  <h2 className="text-xl font-serif font-black text-gray-100">
+                    {tables.find(t => t.id === selectedTable)?.table_number}
+                  </h2>
+                  <p className="text-amber-500/60 text-xs mt-1 uppercase tracking-widest">{billing.orders.length} order(s) in session</p>
+                </div>
+                <div className="flex gap-3 items-center">
+                  <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)} className="bg-white/5 border border-white/10 text-gray-300 text-sm rounded-xl px-4 py-2.5 outline-none focus:ring-1 focus:ring-amber-500/50 transition-all">
+                    <option value="Cash">Cash</option>
+                    <option value="Online">Online / UPI</option>
+                    <option value="Card">Card</option>
+                  </select>
+                  <motion.button
+                    whileTap={{ scale: 0.97 }}
+                    onClick={handleGenerateBill}
+                    disabled={billing.orders.length === 0}
+                    className="flex items-center gap-2 bg-gradient-to-r from-amber-600 to-amber-500 text-black font-black px-6 py-2.5 rounded-xl shadow-[0_0_15px_rgba(245,158,11,0.2)] hover:shadow-[0_0_20px_rgba(245,158,11,0.35)] transition-all disabled:opacity-40 disabled:cursor-not-allowed uppercase tracking-wider text-sm"
+                  >
+                    <Receipt size={16} /> Generate Bill
+                  </motion.button>
                 </div>
               </div>
-            )}
-          </div>
-        )}
+
+              {billing.orders.length === 0 ? (
+                <p className="text-gray-600 text-center py-10 text-sm italic">No pending orders for this table.</p>
+              ) : (
+                <div className="space-y-4">
+                  {billing.orders.map(order => (
+                    <div key={order.id} className="border border-white/5 rounded-2xl overflow-hidden">
+                      <div className="bg-black/40 px-5 py-3 flex justify-between text-xs text-gray-500 uppercase tracking-widest border-b border-white/5">
+                        <span>Order #{order.id} — {order.customer_name || 'Guest'}</span>
+                        <span>{toISTFull(order.placed_at)}</span>
+                      </div>
+                      <table className="w-full text-sm">
+                        <tbody className="divide-y divide-white/5">
+                          {order.items.map(item => (
+                            <tr key={item.id}>
+                              <td className="px-5 py-3 text-gray-300">
+                                <span className={`inline-block w-2 h-2 rounded-full mr-2 ${item.is_veg ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                                {item.name}
+                                {item.special_notes && (
+                                  <span className="ml-2 text-xs bg-amber-500/10 text-amber-400 border border-amber-500/20 px-1.5 py-0.5 rounded font-bold">{item.special_notes}</span>
+                                )}
+                              </td>
+                              <td className="px-5 py-3 text-center text-gray-600 text-xs">×{item.quantity}</td>
+                              <td className="px-5 py-3 text-right font-black text-gray-300">₹{item.price * item.quantity}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      <div className="px-5 py-3 bg-black/40 flex justify-between text-xs font-bold border-t border-white/5">
+                        <span className="text-gray-500 uppercase tracking-wider">Subtotal</span>
+                        <span className="text-amber-500">₹{order.total_amount}</span>
+                      </div>
+                    </div>
+                  ))}
+
+                  <div className="border-t-2 border-amber-500/20 pt-5 mt-2 flex justify-between items-center">
+                    <span className="font-serif text-gray-400 tracking-wider text-sm uppercase">Grand Total</span>
+                    <span className="text-3xl font-black text-amber-500">₹{billing.grandTotal}</span>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Toast Notifications */}
@@ -275,24 +246,19 @@ const BillingPage = () => {
           {notifications.map(note => (
             <motion.div
               key={note.id}
-              initial={{ opacity: 0, x: 100, scale: 0.9 }}
-              animate={{ opacity: 1, x: 0, scale: 1 }}
-              exit={{ opacity: 0, x: 100, scale: 0.9 }}
+              initial={{ opacity: 0, x: 100, scale: 0.9 }} animate={{ opacity: 1, x: 0, scale: 1 }} exit={{ opacity: 0, x: 100, scale: 0.9 }}
               transition={{ duration: 0.3 }}
-              className="bg-white border-2 border-yellow-400 shadow-lg rounded-xl p-4 pointer-events-auto flex items-start gap-3"
+              className="bg-[#0f0f0f] border border-amber-500/30 shadow-[0_0_20px_rgba(251,191,36,0.1)] rounded-2xl p-4 pointer-events-auto flex items-start gap-3"
             >
-              <div className="bg-yellow-100 p-2 rounded-full shrink-0">
-                <Bell size={20} className="text-yellow-600" />
+              <div className="bg-amber-500/10 border border-amber-500/20 p-2 rounded-xl shrink-0">
+                <Bell size={18} className="text-amber-500" />
               </div>
               <div className="flex-1">
-                <p className="font-bold text-sm text-gray-800">Bill Request</p>
-                <p className="text-gray-600 text-sm">{note.message}</p>
+                <p className="font-bold text-sm text-gray-200 uppercase tracking-wider">Bill Request</p>
+                <p className="text-gray-400 text-sm mt-0.5">{note.message}</p>
               </div>
-              <button 
-                onClick={() => removeNotification(note.id)}
-                className="text-gray-400 hover:text-gray-600 shrink-0 p-1"
-              >
-                <X size={16} />
+              <button onClick={() => setNotifications(prev => prev.filter(n => n.id !== note.id))} className="text-gray-600 hover:text-gray-300 p-1 transition-colors">
+                <X size={14} />
               </button>
             </motion.div>
           ))}

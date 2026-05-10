@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
-import { Outlet, Link, useNavigate } from 'react-router-dom';
+import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../store';
-import { LayoutDashboard, ListOrdered, MenuSquare, Grid, BarChart3, History, LogOut, Receipt, Users } from 'lucide-react';
+import { LayoutDashboard, ListOrdered, MenuSquare, Grid, BarChart3, History, LogOut, Receipt, Users, ChefHat } from 'lucide-react';
 import { io } from 'socket.io-client';
 
 const AdminLayout = () => {
   const { logout, email } = useAuthStore();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLogout = () => {
     logout();
@@ -29,10 +30,7 @@ const AdminLayout = () => {
     };
 
     checkRequests();
-    
-    // Listen to localStorage changes (from BillingPage or other tabs)
     window.addEventListener('storage', checkRequests);
-    // Custom event to sync within the same window
     window.addEventListener('billRequestsUpdated', checkRequests);
 
     const socket = io('http://localhost:3000/admin');
@@ -43,7 +41,6 @@ const AdminLayout = () => {
         reqs.add(data.tableId || data.tableNumber);
         localStorage.setItem('billRequestedTables', JSON.stringify([...reqs]));
         setHasBillRequests(true);
-        // Also dispatch event for other components in same window
         window.dispatchEvent(new Event('billRequestsUpdated'));
       } catch (e) {}
     });
@@ -56,57 +53,77 @@ const AdminLayout = () => {
   }, []);
 
   const navItems = [
-    { name: 'Dashboard', path: '/admin/dashboard', icon: <LayoutDashboard size={20} /> },
-    { name: 'Orders', path: '/admin/orders', icon: <ListOrdered size={20} /> },
-    { name: 'Billing', path: '/admin/billing', icon: <Receipt size={20} /> },
-    { name: 'Menu', path: '/admin/menu', icon: <MenuSquare size={20} /> },
-    { name: 'Tables', path: '/admin/tables', icon: <Grid size={20} /> },
-    { name: 'Waiters', path: '/admin/waiters', icon: <Users size={20} /> },
-    { name: 'Analytics', path: '/admin/analytics', icon: <BarChart3 size={20} /> },
-    { name: 'KOT History', path: '/admin/kot-history', icon: <History size={20} /> },
+    { name: 'Dashboard',   path: '/admin/dashboard',   icon: LayoutDashboard },
+    { name: 'Orders',      path: '/admin/orders',       icon: ListOrdered },
+    { name: 'Billing',     path: '/admin/billing',      icon: Receipt },
+    { name: 'Menu',        path: '/admin/menu',         icon: MenuSquare },
+    { name: 'Tables',      path: '/admin/tables',       icon: Grid },
+    { name: 'Waiters',     path: '/admin/waiters',      icon: Users },
+    { name: 'Analytics',   path: '/admin/analytics',    icon: BarChart3 },
+    { name: 'KOT History', path: '/admin/kot-history',  icon: History },
   ];
 
   return (
-    <div className="h-screen overflow-hidden bg-gray-50 flex">
+    <div className="h-screen overflow-hidden bg-[#0a0a0a] flex font-sans">
       {/* Sidebar */}
-      <aside className="w-64 bg-white border-r flex flex-col">
-        <div className="p-6 border-b">
-          <h2 className="text-2xl font-black">Restro Admin</h2>
-          <p className="text-sm text-gray-500 truncate">{email}</p>
+      <aside className="w-64 bg-[#0f0f0f] border-r border-white/5 flex flex-col">
+        {/* Brand */}
+        <div className="px-6 py-6 border-b border-white/5">
+          <div className="flex items-center gap-3 mb-1">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-amber-700 flex items-center justify-center shadow-[0_0_10px_rgba(251,191,36,0.3)]">
+              <ChefHat size={16} className="text-black" strokeWidth={2} />
+            </div>
+            <h2 className="text-lg font-serif font-black bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-600 bg-clip-text text-transparent tracking-tight">
+              Cafe Fillo
+            </h2>
+          </div>
+          <p className="text-xs text-gray-600 truncate mt-1 pl-11 font-medium">{email}</p>
         </div>
-        <nav className="flex-1 p-4 space-y-2">
-          {navItems.map(item => (
-            <Link 
-              key={item.path} 
-              to={item.path} 
-              className="flex items-center justify-between px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-lg font-medium transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                {item.icon}
-                {item.name}
-              </div>
-              {item.name === 'Billing' && hasBillRequests && (
-                <span className="flex h-3 w-3 relative">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-                </span>
-              )}
-            </Link>
-          ))}
+
+        {/* Nav */}
+        <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+          {navItems.map(item => {
+            const Icon = item.icon;
+            const isActive = location.pathname === item.path;
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`flex items-center justify-between px-4 py-3 rounded-xl font-medium text-sm transition-all duration-200 group
+                  ${isActive
+                    ? 'bg-amber-500/10 border border-amber-500/20 text-amber-400 shadow-[0_0_15px_rgba(251,191,36,0.05)]'
+                    : 'text-gray-500 hover:bg-white/5 hover:text-gray-300 border border-transparent'
+                  }`}
+              >
+                <div className="flex items-center gap-3">
+                  <Icon size={18} strokeWidth={isActive ? 2 : 1.5} className={isActive ? 'text-amber-500' : 'text-gray-600 group-hover:text-gray-400'} />
+                  {item.name}
+                </div>
+                {item.name === 'Billing' && hasBillRequests && (
+                  <span className="flex h-2.5 w-2.5 relative">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
+                  </span>
+                )}
+              </Link>
+            );
+          })}
         </nav>
-        <div className="p-4 border-t">
-          <button 
+
+        {/* Logout */}
+        <div className="p-3 border-t border-white/5">
+          <button
             onClick={handleLogout}
-            className="flex items-center gap-3 w-full px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg font-medium transition-colors"
+            className="flex items-center gap-3 w-full px-4 py-3 text-red-400/70 hover:text-red-400 hover:bg-red-500/5 rounded-xl font-medium text-sm transition-all border border-transparent hover:border-red-500/10"
           >
-            <LogOut size={20} />
+            <LogOut size={18} strokeWidth={1.5} />
             Logout
           </button>
         </div>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 overflow-auto bg-[#0a0a0a]">
         <Outlet />
       </main>
     </div>

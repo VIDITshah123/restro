@@ -331,16 +331,22 @@ const MenuManagementPage = () => {
     e.target.value = null;
   };
 
+  const inputCls = "w-full bg-white/5 border border-white/10 rounded-xl p-3 text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-amber-500/50 focus:border-amber-500/50 transition-all placeholder:text-gray-600";
+  const labelCls = "block text-xs text-gray-500 uppercase tracking-widest font-bold mb-2";
+  const selectCls = "bg-[#0f0f0f] border border-white/10 text-gray-300 text-sm rounded-xl px-3 py-2.5 outline-none focus:ring-1 focus:ring-amber-500/50 transition-all";
+
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Menu Management</h1>
-        <div className="flex items-center gap-4">
-          <select 
-            value={sortOption} 
-            onChange={e => setSortOption(e.target.value)}
-            className="border p-2 rounded-lg text-sm bg-white outline-none"
-          >
+    <div className="p-8 min-h-screen bg-[#0a0a0a] text-gray-200">
+      {/* Header */}
+      <div className="flex justify-between items-center mb-8 flex-wrap gap-4">
+        <div>
+          <h1 className="text-3xl font-serif font-black bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-600 bg-clip-text text-transparent tracking-tight">
+            Menu
+          </h1>
+          <p className="text-gray-500 text-sm mt-1 uppercase tracking-widest">{menu.length} items</p>
+        </div>
+        <div className="flex items-center gap-3 flex-wrap">
+          <select value={sortOption} onChange={e => setSortOption(e.target.value)} className={selectCls}>
             <option>Default</option>
             <option>Name (A-Z)</option>
             <option>Category (A-Z)</option>
@@ -349,99 +355,91 @@ const MenuManagementPage = () => {
             <option>Type (Veg First)</option>
             <option>Type (Non-Veg First)</option>
           </select>
-          <button onClick={downloadFormat} className="flex items-center gap-2 border border-gray-300 bg-white text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-50">
-            <Download size={16} /> Format
+          <button onClick={downloadFormat} className="flex items-center gap-2 bg-white/5 border border-white/10 text-gray-400 hover:text-gray-200 hover:bg-white/10 px-4 py-2.5 rounded-xl font-medium text-sm transition-all">
+            <Download size={15} /> Format
           </button>
           <div>
-            <input 
-              type="file" 
-              accept=".xlsx, .xls, .csv" 
-              className="hidden" 
-              ref={excelInputRef}
-              onChange={handleFileUpload}
-            />
-            <button onClick={() => excelInputRef.current?.click()} className="flex items-center gap-2 border border-gray-300 bg-white text-green-700 px-4 py-2 rounded-lg font-medium hover:bg-green-50">
-              <FileSpreadsheet size={16} /> Import
+            <input type="file" accept=".xlsx,.xls,.csv" className="hidden" ref={excelInputRef} onChange={handleFileUpload} />
+            <button onClick={() => excelInputRef.current?.click()} className="flex items-center gap-2 bg-green-500/10 border border-green-500/20 text-green-400 hover:bg-green-500/20 px-4 py-2.5 rounded-xl font-medium text-sm transition-all">
+              <FileSpreadsheet size={15} /> Import
             </button>
           </div>
-          <button onClick={() => setIsCategoryModalOpen(true)} className="border border-gray-300 bg-white text-gray-700 px-4 py-2 rounded-lg font-medium hover:bg-gray-50">
+          <button onClick={() => setIsCategoryModalOpen(true)} className="bg-white/5 border border-white/10 text-gray-400 hover:text-gray-200 hover:bg-white/10 px-4 py-2.5 rounded-xl font-medium text-sm transition-all">
             Manage Categories
           </button>
-          <button onClick={() => handleOpenModal(null, true)} className="bg-orange-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-orange-700">
+          <button onClick={() => handleOpenModal(null, true)} className="bg-amber-500/10 border border-amber-500/20 text-amber-400 hover:bg-amber-500/20 px-4 py-2.5 rounded-xl font-bold text-sm transition-all uppercase tracking-wider">
             + Combo Meal
           </button>
-          <button onClick={() => handleOpenModal()} className="bg-black text-white px-4 py-2 rounded-lg font-medium hover:bg-gray-800">
-            + Add New Item
+          <button onClick={() => handleOpenModal()} className="bg-gradient-to-r from-amber-600 to-amber-500 text-black font-black px-5 py-2.5 rounded-xl shadow-[0_0_15px_rgba(245,158,11,0.2)] hover:shadow-[0_0_20px_rgba(245,158,11,0.35)] transition-all text-sm uppercase tracking-wider">
+            + Add Item
           </button>
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-4 mb-6 bg-white p-4 rounded-xl shadow-sm border items-center">
-        <input 
-          type="text" 
-          placeholder="Search by name..." 
+      <div className="flex flex-wrap gap-3 mb-6 bg-[#0f0f0f] border border-white/5 p-4 rounded-2xl items-center">
+        <input
+          type="text"
+          placeholder="Search by name…"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="flex-1 min-w-[200px] border p-2 rounded-lg text-sm bg-white outline-none"
+          className="flex-1 min-w-[200px] bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-gray-200 outline-none focus:ring-1 focus:ring-amber-500/50 placeholder:text-gray-600 transition-all"
         />
-        <select 
-          value={filterCategory} 
-          onChange={(e) => setFilterCategory(e.target.value)}
-          className="border p-2 rounded-lg text-sm bg-white outline-none"
-        >
+        <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className={selectCls}>
           <option value="">All Categories</option>
           {categories.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
-        <select 
-          value={filterType} 
-          onChange={(e) => setFilterType(e.target.value)}
-          className="border p-2 rounded-lg text-sm bg-white outline-none"
-        >
+        <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className={selectCls}>
           <option value="All">All Types</option>
           <option value="Veg">Veg Only</option>
           <option value="Non-Veg">Non-Veg Only</option>
         </select>
       </div>
       
-      <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+      <div className="bg-[#0f0f0f] border border-white/5 rounded-2xl overflow-hidden">
         <table className="w-full text-left">
-          <thead className="bg-gray-50 border-b">
-            <tr>
-              <th className="p-4">Item Name</th>
-              <th className="p-4">Category</th>
-              <th className="p-4">Price</th>
-              <th className="p-4">Type</th>
-              <th className="p-4">Available</th>
-              <th className="p-4 text-right">Actions</th>
+          <thead>
+            <tr className="border-b border-white/5">
+              <th className="px-5 py-4 text-xs text-gray-500 uppercase tracking-widest font-bold">Item Name</th>
+              <th className="px-5 py-4 text-xs text-gray-500 uppercase tracking-widest font-bold">Category</th>
+              <th className="px-5 py-4 text-xs text-gray-500 uppercase tracking-widest font-bold">Price</th>
+              <th className="px-5 py-4 text-xs text-gray-500 uppercase tracking-widest font-bold">Type</th>
+              <th className="px-5 py-4 text-xs text-gray-500 uppercase tracking-widest font-bold">Available</th>
+              <th className="px-5 py-4 text-xs text-gray-500 uppercase tracking-widest font-bold text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y">
+          <tbody className="divide-y divide-white/5">
             {sortedMenu.map(item => (
-              <tr key={item.id} className="hover:bg-gray-50">
-                <td className="p-4 font-bold">{item.name}</td>
-                <td className="p-4">{item.category}</td>
-                <td className="p-4">₹{item.price}</td>
-                <td className="p-4">
-                  <span className={`px-2 py-1 rounded text-xs font-bold ${item.is_veg ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+              <tr key={item.id} className="hover:bg-white/[0.02] transition-colors">
+                <td className="px-5 py-4 font-bold text-gray-200">{item.name}</td>
+                <td className="px-5 py-4 text-sm text-gray-500">{item.category}</td>
+                <td className="px-5 py-4 font-black text-amber-500">₹{item.price}</td>
+                <td className="px-5 py-4">
+                  <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${
+                    item.is_veg
+                      ? 'bg-green-500/10 text-green-400 border-green-500/20'
+                      : 'bg-red-500/10 text-red-400 border-red-500/20'
+                  }`}>
                     {item.is_veg ? 'Veg' : 'Non-Veg'}
                   </span>
                 </td>
-                <td className="p-4">
-                  <button 
+                <td className="px-5 py-4">
+                  <button
                     onClick={() => toggleAvailability(item.id, item.is_available)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
-                      item.is_available ? 'bg-green-500' : 'bg-gray-300'
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-all ${
+                      item.is_available ? 'bg-amber-500 shadow-[0_0_8px_rgba(251,191,36,0.4)]' : 'bg-white/10'
                     }`}
                   >
-                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform shadow-sm ${
                       item.is_available ? 'translate-x-6' : 'translate-x-1'
                     }`} />
                   </button>
                 </td>
-                <td className="p-4 text-right space-x-2">
-                  <button onClick={() => openVariantPanel(item)} className="text-purple-600 hover:text-purple-800 text-sm font-medium">Add-ons</button>
-                  <button onClick={() => handleOpenModal(item)} className="text-blue-600 hover:text-blue-800 text-sm font-medium">Edit</button>
-                  <button onClick={() => handleDelete(item.id)} className="text-red-600 hover:text-red-800 text-sm font-medium">Delete</button>
+                <td className="px-5 py-4 text-right">
+                  <div className="flex items-center justify-end gap-2">
+                    <button onClick={() => openVariantPanel(item)} className="text-xs font-bold px-3 py-1.5 rounded-lg bg-purple-500/10 text-purple-400 border border-purple-500/20 hover:bg-purple-500/20 transition-all">Add-ons</button>
+                    <button onClick={() => handleOpenModal(item)} className="text-xs font-bold px-3 py-1.5 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 transition-all">Edit</button>
+                    <button onClick={() => handleDelete(item.id)} className="text-xs font-bold px-3 py-1.5 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-all">Delete</button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -451,150 +449,105 @@ const MenuManagementPage = () => {
 
       {/* Variant Management Panel */}
       {variantPanelItem && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-lg w-full max-w-md p-6">
-            <div className="flex justify-between items-start mb-4">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#0f0f0f] border border-white/10 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.8)] w-full max-w-md">
+            <div className="flex justify-between items-start px-6 py-5 border-b border-white/10">
               <div>
-                <h2 className="text-xl font-bold">Add-ons: {variantPanelItem.name}</h2>
-                <p className="text-sm text-gray-500">Base price: ₹{variantPanelItem.price}</p>
+                <h2 className="text-lg font-serif font-black text-gray-100">Add-ons: {variantPanelItem.name}</h2>
+                <p className="text-xs text-amber-500/60 mt-1 uppercase tracking-widest">Base price: ₹{variantPanelItem.price}</p>
               </div>
-              <button onClick={() => setVariantPanelItem(null)} className="text-gray-400 p-1">✕</button>
+              <button onClick={() => setVariantPanelItem(null)} className="text-gray-600 hover:text-gray-300 bg-white/5 rounded-full p-1.5 transition-colors">
+                <X size={15} />
+              </button>
             </div>
-
-            {/* Existing add-ons */}
-            <div className="mb-4 space-y-2">
-              {variants.length === 0 && <p className="text-gray-400 text-sm">No add-ons yet. Add one below.</p>}
+            <div className="p-6 space-y-2 mb-2">
+              {variants.length === 0 && <p className="text-gray-600 text-sm italic">No add-ons yet.</p>}
               {variants.map(v => (
-                <div key={v.id} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
-                  <span className="font-medium text-sm">{v.name}</span>
-                  <div className="flex items-center gap-3">
-                    <span className="font-bold text-sm">
-                      {v.price > 0 ? `+₹${v.price}` : `-₹${Math.abs(v.price)}`}
-                    </span>
-                    <button onClick={() => deleteVariant(v.id)} className="text-red-500 text-xs font-medium">Remove</button>
+                <div key={v.id} className="flex items-center justify-between bg-white/5 border border-white/10 rounded-xl px-4 py-2.5">
+                  <span className="font-medium text-sm text-gray-300">{v.name}</span>
+                  <div className="flex items-center gap-4">
+                    <span className="font-black text-amber-500 text-sm">{v.price > 0 ? `+₹${v.price}` : `-₹${Math.abs(v.price)}`}</span>
+                    <button onClick={() => deleteVariant(v.id)} className="text-red-400/70 hover:text-red-400 text-xs font-bold transition-colors">Remove</button>
                   </div>
                 </div>
               ))}
             </div>
-
-            {/* Add addon form */}
-            <form onSubmit={addVariant} className="border-t pt-4 flex gap-2">
-              <input
-                required
-                type="text"
-                placeholder="Add-on name (e.g. Extra Cheese)"
-                value={variantForm.name}
-                onChange={e => setVariantForm({ ...variantForm, name: e.target.value })}
-                className="flex-1 border rounded-lg p-2 text-sm"
-              />
-              <input
-                required
-                type="number"
-                placeholder="Sell ₹"
-                value={variantForm.price}
-                onChange={e => setVariantForm({ ...variantForm, price: e.target.value })}
-                className="w-20 border rounded-lg p-2 text-sm"
-              />
-              <input
-                type="number"
-                placeholder="Cost ₹"
-                value={variantForm.cost_price}
-                onChange={e => setVariantForm({ ...variantForm, cost_price: e.target.value })}
-                className="w-20 border rounded-lg p-2 text-sm"
-              />
-              <button type="submit" className="bg-black text-white px-3 py-2 rounded-lg text-sm font-bold">Add</button>
+            <form onSubmit={addVariant} className="border-t border-white/10 p-4 flex gap-2">
+              <input required type="text" placeholder="Add-on name" value={variantForm.name} onChange={e => setVariantForm({ ...variantForm, name: e.target.value })} className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-gray-200 outline-none focus:ring-1 focus:ring-amber-500/50 placeholder:text-gray-600" />
+              <input required type="number" placeholder="Sell ₹" value={variantForm.price} onChange={e => setVariantForm({ ...variantForm, price: e.target.value })} className="w-20 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-gray-200 outline-none focus:ring-1 focus:ring-amber-500/50" />
+              <input type="number" placeholder="Cost ₹" value={variantForm.cost_price} onChange={e => setVariantForm({ ...variantForm, cost_price: e.target.value })} className="w-20 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-gray-200 outline-none focus:ring-1 focus:ring-amber-500/50" />
+              <button type="submit" className="bg-gradient-to-r from-amber-600 to-amber-500 text-black font-black px-4 py-2 rounded-xl text-sm">Add</button>
             </form>
           </div>
         </div>
       )}
 
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-lg max-w-md w-full p-6">
-            <h2 className="text-xl font-bold mb-4">{editingItem ? 'Edit Item' : 'Add New Item'}</h2>
-            <form onSubmit={handleSave} className="space-y-4">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setIsModalOpen(false)}>
+          <div className="bg-[#0f0f0f] border border-white/10 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.8)] max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="sticky top-0 bg-[#0f0f0f]/95 backdrop-blur-xl border-b border-white/10 px-6 py-5 flex justify-between items-center">
+              <h2 className="text-xl font-serif font-black text-gray-100">{editingItem ? 'Edit Item' : showComboBuilder ? '+ Combo Meal' : '+ Add Item'}</h2>
+              <button onClick={() => setIsModalOpen(false)} className="text-gray-600 hover:text-gray-300 bg-white/5 rounded-full p-1.5 transition-colors"><X size={15} /></button>
+            </div>
+            <form onSubmit={handleSave} className="p-6 space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Name</label>
-                <input required type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full border rounded-lg p-2" />
+                <label className={labelCls}>Name</label>
+                <input required type="text" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className={inputCls} />
               </div>
-
-              <div className="flex gap-4 bg-gray-50 p-3 rounded-lg border border-gray-200">
-                <span className="text-sm font-medium text-gray-700 mr-4">Type:</span>
+              <div className="flex gap-4 bg-white/5 border border-white/10 p-3 rounded-xl">
+                <span className="text-xs text-gray-500 uppercase tracking-wider mr-2 self-center">Type:</span>
                 <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="radio" name="is_veg" checked={formData.is_veg === 1} onChange={() => setFormData({...formData, is_veg: 1})} className="accent-black" />
-                  <span className="text-sm font-medium text-green-700">Veg</span>
+                  <input type="radio" name="is_veg" checked={formData.is_veg === 1} onChange={() => setFormData({...formData, is_veg: 1})} className="accent-amber-500" />
+                  <span className="text-sm font-bold text-green-400">Veg</span>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="radio" name="is_veg" checked={formData.is_veg === 0} onChange={() => setFormData({...formData, is_veg: 0})} className="accent-black" />
-                  <span className="text-sm font-medium text-red-700">Non-Veg</span>
+                  <input type="radio" name="is_veg" checked={formData.is_veg === 0} onChange={() => setFormData({...formData, is_veg: 0})} className="accent-amber-500" />
+                  <span className="text-sm font-bold text-red-400">Non-Veg</span>
                 </label>
               </div>
-              <div className={`grid ${showComboBuilder ? 'grid-cols-2' : 'grid-cols-3'} gap-4`}>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Selling Price (₹)</label>
-                  <input required type="number" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} className="w-full border rounded-lg p-2" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Cost Price (₹) {showComboBuilder && <span className="text-xs text-orange-600 font-normal">(Auto-calculated)</span>}</label>
-                  <input type="number" value={formData.cost_price} onChange={e => setFormData({...formData, cost_price: e.target.value})} className="w-full border rounded-lg p-2" placeholder="Optional" readOnly={showComboBuilder} />
-                </div>
+              <div className={`grid ${showComboBuilder ? 'grid-cols-2' : 'grid-cols-3'} gap-3`}>
+                <div><label className={labelCls}>Sell Price (₹)</label><input required type="number" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} className={inputCls} /></div>
+                <div><label className={labelCls}>Cost Price (₹)</label><input type="number" value={formData.cost_price} onChange={e => setFormData({...formData, cost_price: e.target.value})} className={inputCls} placeholder="Optional" readOnly={showComboBuilder} /></div>
                 {!showComboBuilder && (
                   <div>
-                    <label className="block text-sm font-medium mb-1">Category</label>
-                    <input required list="categories" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} className="w-full border rounded-lg p-2" placeholder="e.g. Starters" />
-                    <datalist id="categories">
-                      {categories.map(c => <option key={c} value={c} />)}
-                    </datalist>
+                    <label className={labelCls}>Category</label>
+                    <input required list="categories" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})} className={inputCls} placeholder="e.g. Starters" />
+                    <datalist id="categories">{categories.map(c => <option key={c} value={c} />)}</datalist>
                   </div>
                 )}
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Description</label>
-                <textarea rows="2" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="w-full border rounded-lg p-2"></textarea>
+                <label className={labelCls}>Description</label>
+                <textarea rows="2" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className={inputCls}></textarea>
               </div>
-
               {showComboBuilder && (
-                <div className="bg-orange-50 p-4 rounded-lg border border-orange-200 mt-2 space-y-2">
-                  <h3 className="font-bold text-orange-800 text-sm">Combo Builder (Select items to add)</h3>
-                  <div className="max-h-60 overflow-y-auto bg-white border rounded p-2 space-y-2">
+                <div className="bg-amber-500/5 border border-amber-500/20 p-4 rounded-xl space-y-2">
+                  <h3 className="font-bold text-amber-400 text-xs uppercase tracking-widest">Combo Builder</h3>
+                  <div className="max-h-48 overflow-y-auto space-y-2 pr-1">
                     {menu.filter(m => m.is_available && m.category !== 'Combo Meals' && m.is_veg === formData.is_veg).map(mi => (
-                      <div key={mi.id} className="border-b pb-2 last:border-0 last:pb-0">
-                        <label className="flex items-center gap-2 cursor-pointer text-sm p-1 hover:bg-gray-50">
+                      <div key={mi.id} className="border-b border-white/5 pb-2 last:border-0">
+                        <label className="flex items-center gap-2 cursor-pointer text-sm p-1 hover:bg-white/5 rounded-lg">
                           <input type="checkbox" onChange={(e) => {
-                            const cost = parseFloat(mi.cost_price) || 0;
-                            const nameText = `1x ${mi.name}`;
-                            let newCost = parseFloat(formData.cost_price) || 0;
-                            let newDesc = formData.description || '';
-                            if (e.target.checked) {
-                               newCost += cost;
-                               newDesc = newDesc ? `${newDesc}\n- ${nameText}` : `- ${nameText}`;
-                            } else {
-                               newCost -= cost;
-                               newDesc = newDesc.replace(`- ${nameText}`, '').replace(/\n\n/g, '\n').trim();
-                            }
+                            const cost = parseFloat(mi.cost_price) || 0; const nameText = `1x ${mi.name}`;
+                            let newCost = parseFloat(formData.cost_price) || 0; let newDesc = formData.description || '';
+                            if (e.target.checked) { newCost += cost; newDesc = newDesc ? `${newDesc}\n- ${nameText}` : `- ${nameText}`; }
+                            else { newCost -= cost; newDesc = newDesc.replace(`- ${nameText}`, '').replace(/\n\n/g, '\n').trim(); }
                             setFormData({...formData, cost_price: Math.max(0, newCost), description: newDesc});
-                          }} className="accent-orange-600" />
-                          <span className="font-medium">{mi.name}</span> <span className="text-gray-400 text-xs">(Cost: ₹{mi.cost_price || 0})</span>
+                          }} className="accent-amber-500" />
+                          <span className="font-medium text-gray-300">{mi.name}</span> <span className="text-gray-600 text-xs">(Cost: ₹{mi.cost_price || 0})</span>
                         </label>
-                        {mi.variants && mi.variants.length > 0 && (
+                        {mi.variants?.length > 0 && (
                           <div className="ml-6 mt-1 space-y-1">
                             {mi.variants.map(v => (
-                              <label key={v.id} className="flex items-center gap-2 cursor-pointer text-xs p-1 hover:bg-gray-50 text-gray-600">
+                              <label key={v.id} className="flex items-center gap-2 cursor-pointer text-xs p-1 hover:bg-white/5 rounded-lg text-gray-500">
                                 <input type="checkbox" onChange={(e) => {
-                                  const cost = parseFloat(v.cost_price) || 0;
-                                  const nameText = `1x ${mi.name} (${v.name})`;
-                                  let newCost = parseFloat(formData.cost_price) || 0;
-                                  let newDesc = formData.description || '';
-                                  if (e.target.checked) {
-                                     newCost += cost;
-                                     newDesc = newDesc ? `${newDesc}\n- ${nameText}` : `- ${nameText}`;
-                                  } else {
-                                     newCost -= cost;
-                                     newDesc = newDesc.replace(`- ${nameText}`, '').replace(/\n\n/g, '\n').trim();
-                                  }
+                                  const cost = parseFloat(v.cost_price) || 0; const nameText = `1x ${mi.name} (${v.name})`;
+                                  let newCost = parseFloat(formData.cost_price) || 0; let newDesc = formData.description || '';
+                                  if (e.target.checked) { newCost += cost; newDesc = newDesc ? `${newDesc}\n- ${nameText}` : `- ${nameText}`; }
+                                  else { newCost -= cost; newDesc = newDesc.replace(`- ${nameText}`, '').replace(/\n\n/g, '\n').trim(); }
                                   setFormData({...formData, cost_price: Math.max(0, newCost), description: newDesc});
-                                }} className="accent-orange-400" />
-                                {v.name} <span className="text-gray-400">(Cost: ₹{v.cost_price || 0})</span>
+                                }} className="accent-amber-400" />
+                                {v.name} <span className="text-gray-600">(Cost: ₹{v.cost_price || 0})</span>
                               </label>
                             ))}
                           </div>
@@ -604,84 +557,45 @@ const MenuManagementPage = () => {
                   </div>
                 </div>
               )}
-
               <div>
-                <label className="block text-sm font-medium mb-1">Image</label>
-                <div
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onDrop={handleDrop}
-                  className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
-                    isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'
-                  }`}
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileInputChange}
-                    className="hidden"
-                  />
+                <label className={labelCls}>Image</label>
+                <div onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}
+                  className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-all ${
+                    isDragging ? 'border-amber-500 bg-amber-500/5' : 'border-white/10 hover:border-white/20'
+                  }`} onClick={() => fileInputRef.current?.click()}>
+                  <input ref={fileInputRef} type="file" accept="image/*" onChange={handleFileInputChange} className="hidden" />
                   {imagePreview ? (
                     <div className="relative">
-                      <img src={imagePreview} alt="Preview" className="w-32 h-32 object-cover rounded-lg mx-auto mb-2" />
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); removeImage(); }}
-                        className="absolute top-1 right-1/2 translate-x-16 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-                      >
-                        <X size={14} />
+                      <img src={imagePreview} alt="Preview" className="w-28 h-28 object-cover rounded-xl mx-auto mb-2" />
+                      <button type="button" onClick={(e) => { e.stopPropagation(); removeImage(); }} className="absolute top-1 right-1/2 translate-x-14 bg-red-500 text-white rounded-full p-1">
+                        <X size={12} />
                       </button>
-                      <p className="text-sm text-gray-500">Click or drop to replace</p>
+                      <p className="text-xs text-gray-600">Click or drop to replace</p>
                     </div>
                   ) : (
                     <div className="py-4">
-                      <Upload size={24} className="mx-auto text-gray-400 mb-2" />
-                      <p className="text-sm font-medium text-gray-600">Drag & drop an image here</p>
-                      <p className="text-xs text-gray-400 mt-1">or click to browse</p>
+                      <Upload size={22} className="mx-auto text-gray-600 mb-2" />
+                      <p className="text-sm text-gray-500">Drag & drop or click to browse</p>
                     </div>
                   )}
                 </div>
-                <input
-                  type="text"
-                  value={formData.image_url}
-                  onChange={e => {
-                    setFormData({...formData, image_url: e.target.value});
-                    if (e.target.value) setImagePreview(e.target.value);
-                  }}
-                  placeholder="Or paste image URL here"
-                  className="w-full border rounded-lg p-2 mt-2 text-sm"
-                />
+                <input type="text" value={formData.image_url} onChange={e => { setFormData({...formData, image_url: e.target.value}); if (e.target.value) setImagePreview(e.target.value); }} placeholder="Or paste image URL" className={`${inputCls} mt-2`} />
               </div>
-              {/* Removed duplicate Veg/Non-Veg from here as it was moved to the top */}
-
-              {/* Customizable Tag Options */}
-              <div className="pt-2 border-t mt-4">
-                <label className="block text-sm font-medium mb-1">Available Food Types / Tags</label>
+              <div className="pt-2 border-t border-white/10">
+                <label className={labelCls}>Tags</label>
                 <div className="flex flex-wrap gap-2 mb-2">
                   {formData.tags.map((tag, i) => (
-                    <span key={i} className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded text-sm font-medium">
+                    <span key={i} className="flex items-center gap-1 bg-amber-500/10 border border-amber-500/20 text-amber-400 px-2.5 py-1 rounded-full text-xs font-bold">
                       {tag}
-                      <button type="button" onClick={() => removeTag(tag)} className="text-gray-500 hover:text-red-500 rounded-full hover:bg-gray-200 p-0.5">
-                        <X size={12} />
-                      </button>
+                      <button type="button" onClick={() => removeTag(tag)} className="hover:text-red-400 transition-colors"><X size={11} /></button>
                     </span>
                   ))}
                 </div>
-                <input
-                  type="text"
-                  value={tagInput}
-                  onChange={e => setTagInput(e.target.value)}
-                  onKeyDown={handleAddTag}
-                  placeholder="Type a tag and press Enter (e.g. Jain, Vegan)"
-                  className="w-full border rounded-lg p-2 text-sm"
-                />
+                <input type="text" value={tagInput} onChange={e => setTagInput(e.target.value)} onKeyDown={handleAddTag} placeholder="Type tag + Enter (e.g. Jain, Vegan)" className={inputCls} />
               </div>
-              
-              <div className="flex justify-end gap-3 pt-4 mt-2 border-t">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 border rounded-lg font-medium">Cancel</button>
-                <button type="submit" className="px-4 py-2 bg-black text-white rounded-lg font-medium">Save Item</button>
+              <div className="flex justify-end gap-3 pt-4 border-t border-white/10">
+                <button type="button" onClick={() => setIsModalOpen(false)} className="px-5 py-2.5 bg-white/5 border border-white/10 text-gray-400 hover:text-gray-200 rounded-xl font-medium text-sm transition-all">Cancel</button>
+                <button type="submit" className="px-5 py-2.5 bg-gradient-to-r from-amber-600 to-amber-500 text-black font-black rounded-xl text-sm uppercase tracking-wider shadow-[0_0_15px_rgba(245,158,11,0.2)] hover:shadow-[0_0_20px_rgba(245,158,11,0.35)] transition-all">Save Item</button>
               </div>
             </form>
           </div>
@@ -689,30 +603,35 @@ const MenuManagementPage = () => {
       )}
 
       {isCategoryModalOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-lg max-w-sm w-full p-6">
-            <h2 className="text-xl font-bold mb-4">Reorder Categories</h2>
-            <p className="text-sm text-gray-500 mb-4">Categories appear on the customer app in this order.</p>
-            <div className="space-y-2 mb-6 max-h-64 overflow-y-auto">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setIsCategoryModalOpen(false)}>
+          <div className="bg-[#0f0f0f] border border-white/10 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.8)] max-w-sm w-full" onClick={e => e.stopPropagation()}>
+            <div className="px-6 py-5 border-b border-white/10 flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-serif font-black text-gray-100">Reorder Categories</h2>
+                <p className="text-xs text-gray-600 mt-0.5">Drag to reorder — this sets the customer menu order.</p>
+              </div>
+              <button onClick={() => setIsCategoryModalOpen(false)} className="text-gray-600 hover:text-gray-300 bg-white/5 rounded-full p-1.5 transition-colors"><X size={14} /></button>
+            </div>
+            <div className="p-4 space-y-2 max-h-64 overflow-y-auto">
               {categories.map((cat, i) => (
-                <div 
-                  key={cat} 
-                  draggable
+                <div key={cat} draggable
                   onDragStart={(e) => handleDragStartCat(e, i)}
                   onDragOver={(e) => handleDragOverCat(e, i)}
                   onDrop={(e) => handleDropCat(e, i)}
-                  className={`flex justify-between items-center p-3 border rounded-lg bg-white cursor-move transition-all ${draggedCatIndex === i ? 'opacity-50 border-orange-500 scale-[0.98]' : 'hover:border-gray-400 hover:shadow-sm'}`}
+                  className={`flex items-center gap-3 px-4 py-3 border rounded-xl cursor-move transition-all select-none ${
+                    draggedCatIndex === i
+                      ? 'opacity-40 border-amber-500/40 bg-amber-500/5 scale-[0.98]'
+                      : 'border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/10'
+                  }`}
                 >
-                  <div className="flex items-center gap-3">
-                     <span className="text-gray-400 cursor-grab">⋮⋮</span>
-                     <span className="font-medium select-none">{cat}</span>
-                  </div>
+                  <span className="text-gray-600 text-lg leading-none">⋮⋮</span>
+                  <span className="font-medium text-gray-300 text-sm">{cat}</span>
                 </div>
               ))}
             </div>
-            <div className="flex justify-end gap-3 border-t pt-4">
-              <button onClick={() => setIsCategoryModalOpen(false)} className="px-4 py-2 border rounded-lg font-medium">Cancel</button>
-              <button onClick={saveCategoryOrder} className="px-4 py-2 bg-black text-white rounded-lg font-medium">Save Order</button>
+            <div className="flex justify-end gap-3 border-t border-white/10 px-6 py-4">
+              <button onClick={() => setIsCategoryModalOpen(false)} className="px-5 py-2.5 bg-white/5 border border-white/10 text-gray-400 hover:text-gray-200 rounded-xl font-medium text-sm transition-all">Cancel</button>
+              <button onClick={saveCategoryOrder} className="px-5 py-2.5 bg-gradient-to-r from-amber-600 to-amber-500 text-black font-black rounded-xl text-sm uppercase tracking-wider transition-all">Save Order</button>
             </div>
           </div>
         </div>

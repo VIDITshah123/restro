@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../../api';
-import { Download, Trash2, ShoppingBag } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Download, Trash2, ShoppingBag, Plus, Grid3x3 } from 'lucide-react';
 
 const TablesPage = () => {
   const [tables, setTables] = useState([]);
@@ -14,14 +15,11 @@ const TablesPage = () => {
     }
   };
 
-  useEffect(() => {
-    fetchTables();
-  }, []);
+  useEffect(() => { fetchTables(); }, []);
 
   const createTable = async () => {
     const tableNumber = prompt('Enter Table Number (e.g. Table 11):');
     if (!tableNumber) return;
-    
     try {
       await api.post('/tables', { table_number: tableNumber });
       fetchTables();
@@ -34,103 +32,122 @@ const TablesPage = () => {
     try {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
-      canvas.width = 300;
-      canvas.height = 350;
-      
+      canvas.width = 300; canvas.height = 350;
       ctx.fillStyle = '#FFFFFF';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-      
       ctx.fillStyle = '#000000';
       ctx.font = 'bold 24px Inter, sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText(table.table_number, canvas.width / 2, 40);
-      
       const menuUrl = `${window.location.origin}/menu/${table.id}`;
       ctx.font = '14px Inter, sans-serif';
       ctx.fillStyle = '#666666';
       ctx.fillText('Scan QR to view menu', canvas.width / 2, 70);
-      
-      const qrPlaceholder = `QR Code for:\n${menuUrl}`;
-      ctx.font = '12px monospace';
-      ctx.fillStyle = '#333333';
-      const lines = qrPlaceholder.split('\n');
-      lines.forEach((line, i) => {
-        ctx.fillText(line, canvas.width / 2, 120 + i * 20);
-      });
-      
+      const lines = `QR Code for:\n${menuUrl}`.split('\n');
+      ctx.font = '12px monospace'; ctx.fillStyle = '#333333';
+      lines.forEach((line, i) => ctx.fillText(line, canvas.width / 2, 120 + i * 20));
       ctx.font = 'bold 16px Inter, sans-serif';
-      ctx.fillStyle = '#F97316';
-      ctx.fillText('Restaurant Management System', canvas.width / 2, 320);
-      
+      ctx.fillStyle = '#F59E0B';
+      ctx.fillText('Cafe Fillo', canvas.width / 2, 320);
       const link = document.createElement('a');
       link.download = `${table.table_number.replace(/\s+/g, '-').toLowerCase()}-qr.png`;
       link.href = canvas.toDataURL('image/png');
       link.click();
     } catch (err) {
-      console.error('Error downloading QR:', err);
       alert('Failed to download QR code');
     }
   };
 
-  return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Tables Management</h1>
-        <button onClick={createTable} className="bg-black text-white px-4 py-2 rounded-lg font-medium">
-          Add New Table
-        </button>
-      </div>
+  const occupied = tables.filter(t => t.is_occupied).length;
+  const free = tables.length - occupied;
 
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {tables.map(table => (
-          <div key={table.id} className="bg-white rounded-xl shadow-sm border p-4 flex flex-col items-center">
-            <h3 className="text-xl font-bold mb-2">{table.table_number}</h3>
-            
-            <div className={`mb-4 px-3 py-1 rounded-full text-xs font-bold uppercase
-              ${table.is_occupied ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}
-            >
-              {table.is_occupied ? 'Occupied' : 'Free'}
+  return (
+    <div className="p-8 min-h-screen bg-[#0a0a0a] text-gray-200">
+      {/* Header */}
+      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="flex justify-between items-start mb-8">
+        <div>
+          <h1 className="text-3xl font-serif font-black bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-600 bg-clip-text text-transparent tracking-tight">
+            Tables
+          </h1>
+          <p className="text-gray-500 text-sm mt-1">
+            <span className="text-green-400 font-bold">{free} free</span>
+            <span className="text-gray-600 mx-2">·</span>
+            <span className="text-red-400 font-bold">{occupied} occupied</span>
+            <span className="text-gray-600 mx-2">·</span>
+            <span className="text-gray-500">{tables.length} total</span>
+          </p>
+        </div>
+        <motion.button
+          whileTap={{ scale: 0.97 }}
+          onClick={createTable}
+          className="flex items-center gap-2 bg-gradient-to-r from-amber-600 to-amber-500 text-black font-bold px-5 py-2.5 rounded-xl shadow-[0_0_15px_rgba(245,158,11,0.2)] hover:shadow-[0_0_25px_rgba(245,158,11,0.35)] transition-all text-sm uppercase tracking-wider"
+        >
+          <Plus size={16} strokeWidth={2.5} /> Add Table
+        </motion.button>
+      </motion.div>
+
+      {/* Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        {tables.map((table, idx) => (
+          <motion.div
+            key={table.id}
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.04 }}
+            className={`bg-[#0f0f0f] rounded-2xl border p-5 flex flex-col items-center transition-all ${
+              table.is_occupied ? 'border-red-500/20 shadow-[0_0_20px_rgba(239,68,68,0.05)]' : 'border-white/5'
+            }`}
+          >
+            <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-3 ${
+              table.is_occupied ? 'bg-red-500/10 border border-red-500/20' : 'bg-green-500/10 border border-green-500/20'
+            }`}>
+              <Grid3x3 size={22} className={table.is_occupied ? 'text-red-400' : 'text-green-400'} strokeWidth={1.5} />
             </div>
 
+            <h3 className="text-base font-bold text-gray-100 mb-2 text-center">{table.table_number}</h3>
+
+            <span className={`mb-4 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
+              table.is_occupied ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'bg-green-500/10 text-green-400 border border-green-500/20'
+            }`}>
+              {table.is_occupied ? 'Occupied' : 'Free'}
+            </span>
+
             {table.qr_code_url && (
-              <img src={table.qr_code_url} alt={`QR for ${table.table_number}`} className="w-32 h-32 mb-4 border p-1" />
+              <div className="bg-white rounded-xl p-1.5 mb-4">
+                <img src={table.qr_code_url} alt={`QR for ${table.table_number}`} className="w-24 h-24" />
+              </div>
             )}
 
             <div className="flex flex-col gap-2 w-full">
-              <button 
+              <button
                 onClick={() => window.open(`/menu/${table.id}`, '_blank')}
-                className="w-full bg-orange-50 text-orange-600 font-bold text-sm py-2 rounded-lg border border-orange-200 hover:bg-orange-100 transition-colors flex items-center justify-center gap-1"
+                className="w-full bg-amber-500/10 text-amber-500 border border-amber-500/20 font-bold text-xs py-2.5 rounded-xl hover:bg-amber-500/20 transition-colors flex items-center justify-center gap-1.5 uppercase tracking-wider"
               >
-                <ShoppingBag size={14} />
-                Place Order
+                <ShoppingBag size={13} /> Place Order
               </button>
-              
+
               <div className="flex gap-2 w-full">
-                <button 
+                <button
                   onClick={() => downloadQR(table)}
-                  className="flex-1 bg-blue-50 text-blue-600 font-medium text-sm py-2 rounded-lg border border-blue-200 hover:bg-blue-100 transition-colors flex items-center justify-center gap-1"
+                  className="flex-1 bg-white/5 text-gray-400 border border-white/10 font-medium text-xs py-2.5 rounded-xl hover:bg-white/10 hover:text-gray-200 transition-colors flex items-center justify-center gap-1"
                 >
-                  <Download size={14} />
-                  Download QR
+                  <Download size={12} /> QR
                 </button>
-                <button 
+                <button
                   onClick={async () => {
-                  if (!confirm(`Delete ${table.table_number}? This cannot be undone.`)) return;
-                  try {
-                    await api.delete(`/tables/${table.id}`);
-                    fetchTables();
-                  } catch (err) {
-                    const msg = err.response?.data?.message || 'Error deleting table';
-                    alert(msg);
-                  }
-                }}
-                className="text-red-500 font-medium text-sm hover:underline px-2 flex items-center"
-              >
-                <Trash2 size={14} />
+                    if (!confirm(`Delete ${table.table_number}?`)) return;
+                    try {
+                      await api.delete(`/tables/${table.id}`);
+                      fetchTables();
+                    } catch (err) {
+                      alert(err.response?.data?.message || 'Error deleting table');
+                    }
+                  }}
+                  className="px-3 py-2.5 bg-red-500/5 border border-red-500/10 text-red-400/60 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-colors"
+                >
+                  <Trash2 size={13} />
                 </button>
               </div>
             </div>
-          </div>
+          </motion.div>
         ))}
       </div>
     </div>
