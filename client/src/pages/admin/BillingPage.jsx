@@ -13,6 +13,7 @@ const BillingPage = () => {
   const [notifications, setNotifications] = useState([]);
   const [paymentMethod, setPaymentMethod] = useState('Cash');
   const [sortOption, setSortOption] = useState('Table (Asc)');
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const loadBillRequests = () => {
     try { return new Set(JSON.parse(localStorage.getItem('billRequestedTables') || '[]')); }
@@ -76,7 +77,11 @@ const BillingPage = () => {
 
   const handleGenerateBill = async () => {
     if (!selectedTable) return;
-    if (!confirm(`Generate bill? Payment: ${paymentMethod}`)) return;
+    setShowConfirm(true);
+  };
+
+  const confirmGenerateBill = async () => {
+    setShowConfirm(false);
     try {
       await api.post(`/billing/${selectedTable}/generate`, { payment_method: paymentMethod });
       setBillRequestedTables(prev => {
@@ -239,6 +244,61 @@ const BillingPage = () => {
           )}
         </AnimatePresence>
       </div>
+
+      {/* Payment Confirm Modal */}
+      <AnimatePresence>
+        {showConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[9998] flex items-center justify-center p-4"
+            onClick={() => setShowConfirm(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+              onClick={e => e.stopPropagation()}
+              className="bg-[#0f0f0f] border border-white/10 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.8)] w-full max-w-sm"
+            >
+              <div className="px-6 py-5 border-b border-white/10">
+                <h3 className="text-lg font-serif font-black text-gray-100">Confirm Payment</h3>
+                <p className="text-xs text-gray-600 mt-1 uppercase tracking-widest">
+                  {tables.find(t => t.id === selectedTable)?.table_number} · Grand Total ₹{billing?.grandTotal}
+                </p>
+              </div>
+              <div className="p-6 space-y-3">
+                <p className="text-xs text-gray-500 uppercase tracking-widest font-bold mb-3">Select payment method</p>
+                {['Cash', 'Online', 'Card'].map(method => (
+                  <button
+                    key={method}
+                    onClick={() => setPaymentMethod(method)}
+                    className={`w-full flex items-center justify-between px-4 py-3.5 rounded-xl border-2 font-bold text-sm transition-all ${
+                      paymentMethod === method
+                        ? 'bg-amber-500/10 border-amber-500/50 text-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.15)]'
+                        : 'bg-white/5 border-white/10 text-gray-400 hover:border-white/20 hover:text-gray-200'
+                    }`}
+                  >
+                    <span className="flex items-center gap-3">
+                      <span className="text-xl">{method === 'Cash' ? '💵' : method === 'Online' ? '📱' : '💳'}</span>
+                      {method === 'Online' ? 'Online / UPI' : method}
+                    </span>
+                    {paymentMethod === method && (
+                      <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]" />
+                    )}
+                  </button>
+                ))}
+              </div>
+              <div className="flex gap-3 px-6 pb-6">
+                <button onClick={() => setShowConfirm(false)} className="flex-1 py-2.5 bg-white/5 border border-white/10 text-gray-400 hover:text-gray-200 rounded-xl font-bold text-sm transition-all">
+                  Cancel
+                </button>
+                <button onClick={confirmGenerateBill} className="flex-1 py-2.5 bg-gradient-to-r from-amber-600 to-amber-500 text-black font-black rounded-xl text-sm uppercase tracking-wider shadow-[0_0_15px_rgba(245,158,11,0.2)] hover:shadow-[0_0_20px_rgba(245,158,11,0.35)] transition-all">
+                  Confirm & Bill
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Toast Notifications */}
       <div className="fixed top-4 right-4 z-[9999] space-y-2 max-w-sm w-full pointer-events-none">

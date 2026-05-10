@@ -4,7 +4,7 @@ import { toISTFull } from '../../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import * as XLSX from 'xlsx';
 import { Download, Trash2, X, FileText } from 'lucide-react';
-import useDialog from '../../hooks/useDialog';
+
 
 const STATUS_COLORS = {
   placed:    'bg-blue-500/10 text-blue-400 border-blue-500/20',
@@ -102,7 +102,6 @@ const OrdersPage = () => {
   const [dishReport, setDishReport] = useState([]);
   const [sortConfig, setSortConfig] = useState({ key: 'placed_at', direction: 'desc' });
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
-  const { show, DialogUI } = useDialog();
 
   const handleSort = (key) => {
     setSortConfig(prev => ({ key, direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc' }));
@@ -345,7 +344,6 @@ const OrdersPage = () => {
       <AnimatePresence>
         {selectedOrder && <OrderDetailModal order={selectedOrder} onClose={() => setSelectedOrder(null)} />}
       </AnimatePresence>
-      {DialogUI}
     </div>
   );
 };
