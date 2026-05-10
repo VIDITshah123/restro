@@ -1,6 +1,6 @@
 admin@restro.com
 admin123
-
+in admin pages also, enhance the ui
 http://localhost:5173/admin/login
 
 http://localhost:5173/admin/dashboard
