@@ -26,7 +26,7 @@ const AdminLayout = () => {
         } else {
           setHasBillRequests(false);
         }
-      } catch (e) {}
+      } catch (e) { }
     };
 
     checkRequests();
@@ -42,7 +42,7 @@ const AdminLayout = () => {
         localStorage.setItem('billRequestedTables', JSON.stringify([...reqs]));
         setHasBillRequests(true);
         window.dispatchEvent(new Event('billRequestsUpdated'));
-      } catch (e) {}
+      } catch (e) { }
     });
 
     return () => {
@@ -53,14 +53,14 @@ const AdminLayout = () => {
   }, []);
 
   const navItems = [
-    { name: 'Dashboard',   path: '/admin/dashboard',   icon: LayoutDashboard },
-    { name: 'Orders',      path: '/admin/orders',       icon: ListOrdered },
-    { name: 'Billing',     path: '/admin/billing',      icon: Receipt },
-    { name: 'Menu',        path: '/admin/menu',         icon: MenuSquare },
-    { name: 'Tables',      path: '/admin/tables',       icon: Grid },
-    { name: 'Waiters',     path: '/admin/waiters',      icon: Users },
-    { name: 'Analytics',   path: '/admin/analytics',    icon: BarChart3 },
-    { name: 'KOT History', path: '/admin/kot-history',  icon: History },
+    { name: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
+    { name: 'Orders', path: '/admin/orders', icon: ListOrdered },
+    { name: 'Billing', path: '/admin/billing', icon: Receipt },
+    { name: 'Menu', path: '/admin/menu', icon: MenuSquare },
+    { name: 'Tables', path: '/admin/tables', icon: Grid },
+    { name: 'Waiters', path: '/admin/waiters', icon: Users },
+    { name: 'Analytics', path: '/admin/analytics', icon: BarChart3 },
+    { name: 'KOT History', path: '/admin/kot-history', icon: History },
   ];
 
   return (
@@ -70,7 +70,7 @@ const AdminLayout = () => {
         {/* Brand */}
         <div className="px-6 py-6 border-b border-white/5">
           <h2 className="text-lg font-serif font-black bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-600 bg-clip-text text-transparent tracking-tight mb-1">
-            Cafe Fillo
+            Byte Cafe
           </h2>
           <p className="text-xs text-gray-600 truncate font-medium">{email}</p>
         </div>

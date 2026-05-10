@@ -66,7 +66,7 @@ const TablesPage = () => {
       lines.forEach((line, i) => ctx.fillText(line, canvas.width / 2, 120 + i * 20));
       ctx.font = 'bold 16px Inter, sans-serif';
       ctx.fillStyle = '#F59E0B';
-      ctx.fillText('Cafe Fillo', canvas.width / 2, 320);
+      ctx.fillText('Byte Cafe', canvas.width / 2, 320);
       const link = document.createElement('a');
       link.download = `${table.table_number.replace(/\s+/g, '-').toLowerCase()}-qr.png`;
       link.href = canvas.toDataURL('image/png');
@@ -110,21 +110,18 @@ const TablesPage = () => {
           <motion.div
             key={table.id}
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.04 }}
-            className={`bg-[#0f0f0f] rounded-2xl border p-5 flex flex-col items-center transition-all ${
-              table.is_occupied ? 'border-red-500/20 shadow-[0_0_20px_rgba(239,68,68,0.05)]' : 'border-white/5'
-            }`}
+            className={`bg-[#0f0f0f] rounded-2xl border p-5 flex flex-col items-center transition-all ${table.is_occupied ? 'border-red-500/20 shadow-[0_0_20px_rgba(239,68,68,0.05)]' : 'border-white/5'
+              }`}
           >
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-3 ${
-              table.is_occupied ? 'bg-red-500/10 border border-red-500/20' : 'bg-green-500/10 border border-green-500/20'
-            }`}>
+            <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-3 ${table.is_occupied ? 'bg-red-500/10 border border-red-500/20' : 'bg-green-500/10 border border-green-500/20'
+              }`}>
               <Grid3x3 size={22} className={table.is_occupied ? 'text-red-400' : 'text-green-400'} strokeWidth={1.5} />
             </div>
 
             <h3 className="text-base font-bold text-gray-100 mb-2 text-center">{table.table_number}</h3>
 
-            <span className={`mb-4 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
-              table.is_occupied ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'bg-green-500/10 text-green-400 border border-green-500/20'
-            }`}>
+            <span className={`mb-4 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${table.is_occupied ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'bg-green-500/10 text-green-400 border border-green-500/20'
+              }`}>
               {table.is_occupied ? 'Occupied' : 'Free'}
             </span>
 
