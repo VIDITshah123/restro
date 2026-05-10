@@ -43,7 +43,7 @@ sudo apt update && sudo apt upgrade -y
 
 # Install Node.js (v20)
 curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-sudo apt-install -y nodejs
+sudo apt install -y nodejs
 
 # Install Nginx
 sudo apt install -y nginx
@@ -60,15 +60,11 @@ You can use `git` to clone your repository, or use `scp` to copy files directly.
 **Option A: Using Git (Recommended)**
 ```bash
 # On your EC2 instance:
-git clone <your-github-repo-url> restro
+git clone https://github.com/VIDITshah123/restro.git restro
 cd restro
 ```
 
-**Option B: Using SCP (Run this from your Local Computer, not EC2)**
-```bash
-# Copy the entire folder (excluding node_modules)
-scp -i "restro-key.pem" -r ./restro ubuntu@<YOUR_EC2_PUBLIC_IP>:/home/ubuntu/
-```
+
 
 ---
 
