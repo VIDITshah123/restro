@@ -79,37 +79,11 @@ const BillingPage = () => {
   const handleGenerateBill = async () => {
     if (!selectedTable) return;
     const tableName = tables.find(t => t.id === selectedTable)?.table_number || 'this table';
-
-    const PaymentSelector = () => (
-      <div className="mt-4">
-        <label className="block text-xs text-gray-500 uppercase tracking-widest font-bold mb-2">Payment Method</label>
-        <div className="grid grid-cols-3 gap-2">
-          {['Cash', 'Online', 'Card'].map(m => (
-            <button
-              key={m}
-              type="button"
-              onClick={() => setPaymentMethod(m)}
-              className={`py-2.5 rounded-xl border text-sm font-bold uppercase tracking-wider transition-all ${
-                paymentMethod === m
-                  ? 'bg-amber-500/20 border-amber-500/40 text-amber-400'
-                  : 'bg-white/5 border-white/10 text-gray-500 hover:text-gray-300 hover:bg-white/10'
-              }`}
-            >
-              {m}
-            </button>
-          ))}
-        </div>
-      </div>
+    const confirmed = await showConfirm(
+      `Generate bill for ${tableName} via ${paymentMethod}?`,
+      { title: 'Generate Bill', confirmLabel: 'Generate Bill' }
     );
-
-    const confirmed = await showConfirm(`Generate bill for ${tableName}?`, {
-      title: 'Generate Bill',
-      confirmLabel: 'Generate Bill',
-      content: <PaymentSelector />
-    });
-
     if (!confirmed) return;
-
     try {
       await api.post(`/billing/${selectedTable}/generate`, { payment_method: paymentMethod });
       setBillRequestedTables(prev => {
@@ -206,21 +180,44 @@ const BillingPage = () => {
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
               className="bg-[#0f0f0f] border border-white/5 rounded-2xl p-6"
             >
-              <div className="flex justify-between items-start mb-6">
-                <div>
-                  <h2 className="text-xl font-serif font-black text-gray-100">
-                    {tables.find(t => t.id === selectedTable)?.table_number}
-                  </h2>
-                  <p className="text-amber-500/60 text-xs mt-1 uppercase tracking-widest">{billing.orders.length} order(s) in session</p>
+              <div className="flex flex-col gap-4 mb-6">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h2 className="text-xl font-serif font-black text-gray-100">
+                      {tables.find(t => t.id === selectedTable)?.table_number}
+                    </h2>
+                    <p className="text-amber-500/60 text-xs mt-1 uppercase tracking-widest">{billing.orders.length} order(s) in session</p>
+                  </div>
+                  <motion.button
+                    whileTap={{ scale: 0.97 }}
+                    onClick={handleGenerateBill}
+                    disabled={billing.orders.length === 0}
+                    className="flex items-center gap-2 bg-gradient-to-r from-amber-600 to-amber-500 text-black font-black px-6 py-2.5 rounded-xl shadow-[0_0_15px_rgba(245,158,11,0.2)] hover:shadow-[0_0_20px_rgba(245,158,11,0.35)] transition-all disabled:opacity-40 disabled:cursor-not-allowed uppercase tracking-wider text-sm"
+                  >
+                    <Receipt size={16} /> Generate Bill
+                  </motion.button>
                 </div>
-                <motion.button
-                  whileTap={{ scale: 0.97 }}
-                  onClick={handleGenerateBill}
-                  disabled={billing.orders.length === 0}
-                  className="flex items-center gap-2 bg-gradient-to-r from-amber-600 to-amber-500 text-black font-black px-6 py-2.5 rounded-xl shadow-[0_0_15px_rgba(245,158,11,0.2)] hover:shadow-[0_0_20px_rgba(245,158,11,0.35)] transition-all disabled:opacity-40 disabled:cursor-not-allowed uppercase tracking-wider text-sm"
-                >
-                  <Receipt size={16} /> Generate Bill
-                </motion.button>
+
+                {/* Payment method selector — always visible & reactive */}
+                <div>
+                  <p className="text-xs text-gray-600 uppercase tracking-widest font-bold mb-2">Payment Method</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {['Cash', 'Online', 'Card'].map(m => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => setPaymentMethod(m)}
+                        className={`py-2.5 rounded-xl border text-sm font-bold uppercase tracking-wider transition-all ${
+                          paymentMethod === m
+                            ? 'bg-amber-500/20 border-amber-500/40 text-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.1)]'
+                            : 'bg-white/5 border-white/10 text-gray-500 hover:text-gray-300 hover:bg-white/10'
+                        }`}
+                      >
+                        {m}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
 
               {billing.orders.length === 0 ? (
