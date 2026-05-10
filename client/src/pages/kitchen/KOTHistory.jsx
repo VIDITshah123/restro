@@ -5,18 +5,27 @@ import { toIST, toISTFull } from '../../lib/utils';
 const KOTHistory = () => {
   const [kots, setKots] = useState([]);
   const [sortOption, setSortOption] = useState('Newest First');
+  const [dateRange, setDateRange] = useState({ start: '', end: '' });
 
   useEffect(() => {
     const fetchHistory = async () => {
       try {
-        const res = await api.get('/kot/history');
+        let url = '/kot/history';
+        const params = new URLSearchParams();
+        if (dateRange.start) params.append('start', dateRange.start);
+        if (dateRange.end) params.append('end', dateRange.end);
+        
+        if (params.toString()) {
+           url += `?${params.toString()}`;
+        }
+        const res = await api.get(url);
         setKots(res.data.data);
       } catch (err) {
         console.error(err);
       }
     };
     fetchHistory();
-  }, []);
+  }, [dateRange]);
 
   const clearHistory = async () => {
     if (!confirm('Are you sure you want to clear ALL KOT history? This cannot be undone.')) return;
@@ -53,10 +62,25 @@ const KOTHistory = () => {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-black text-gray-800">KOT History</h1>
         <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 bg-white rounded-lg border px-2 py-1">
+            <input 
+              type="date" 
+              value={dateRange.start}
+              onChange={e => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+              className="p-1 text-sm outline-none bg-transparent"
+            />
+            <span className="text-gray-400 text-sm">to</span>
+            <input 
+              type="date" 
+              value={dateRange.end}
+              onChange={e => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+              className="p-1 text-sm outline-none bg-transparent"
+            />
+          </div>
           <select 
             value={sortOption} 
             onChange={e => setSortOption(e.target.value)}
-            className="border p-2 rounded-lg text-sm"
+            className="border p-2 rounded-lg text-sm bg-white"
           >
             <option>Newest First</option>
             <option>Oldest First</option>

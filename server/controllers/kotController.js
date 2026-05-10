@@ -22,14 +22,27 @@ const getKot = (req, res) => {
 };
 
 const getKotHistory = (req, res) => {
-  const kots = db.prepare(`
+  const { start, end } = req.query;
+  
+  let query = `
     SELECT k.*, t.table_number
     FROM kot k
     JOIN tables t ON k.table_id = t.id
     WHERE k.status = 'served'
-    ORDER BY k.generated_at DESC
-    LIMIT 50
-  `).all();
+  `;
+  const params = [];
+
+  if (start) {
+    query += ` AND k.generated_at >= ?`;
+    params.push(start);
+  }
+  if (end) {
+    query += ` AND k.generated_at < datetime(?, '+1 day')`;
+    params.push(end);
+  }
+
+  query += ` ORDER BY k.generated_at DESC LIMIT 500`;
+  const kots = db.prepare(query).all(...params);
   
   for (const kot of kots) {
     kot.items = db.prepare(`

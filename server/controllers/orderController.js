@@ -209,8 +209,30 @@ const generateTableBill = (req, res) => {
 
 const clearOrderHistory = (req, res) => {
   try {
-    db.prepare("UPDATE orders SET is_hidden = 1 WHERE status = 'billed'").run();
-    res.json({ success: true, message: 'Order history cleared' });
+    db.transaction(() => {
+      // Find billed orders
+      const billedOrders = db.prepare("SELECT id FROM orders WHERE status = 'billed'").all();
+      if (billedOrders.length > 0) {
+        const billedIds = billedOrders.map(o => o.id);
+        const placeholders = billedIds.map(() => '?').join(',');
+
+        // Delete associated KOTs and Order Items first (to respect foreign keys)
+        db.prepare(`DELETE FROM kot WHERE order_id IN (${placeholders})`).run(...billedIds);
+        db.prepare(`DELETE FROM order_items WHERE order_id IN (${placeholders})`).run(...billedIds);
+
+        // Delete the billed orders
+        db.prepare("DELETE FROM orders WHERE status = 'billed'").run();
+      }
+
+      // Reset sequences if tables are empty
+      const ordersCount = db.prepare("SELECT COUNT(*) as count FROM orders").get().count;
+      if (ordersCount === 0) {
+        db.prepare("DELETE FROM sqlite_sequence WHERE name='orders'").run();
+        db.prepare("DELETE FROM sqlite_sequence WHERE name='order_items'").run();
+        db.prepare("DELETE FROM sqlite_sequence WHERE name='kot'").run();
+      }
+    })();
+    res.json({ success: true, message: 'Order history fully cleared' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -218,8 +240,14 @@ const clearOrderHistory = (req, res) => {
 
 const clearKotHistory = (req, res) => {
   try {
-    db.prepare("DELETE FROM kot WHERE status = 'served'").run();
-    res.json({ success: true, message: 'KOT history cleared' });
+    db.transaction(() => {
+      db.prepare("DELETE FROM kot WHERE status = 'served'").run();
+      const kotCount = db.prepare("SELECT COUNT(*) as count FROM kot").get().count;
+      if (kotCount === 0) {
+        db.prepare("DELETE FROM sqlite_sequence WHERE name='kot'").run();
+      }
+    })();
+    res.json({ success: true, message: 'KOT history fully cleared' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
