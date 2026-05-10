@@ -48,25 +48,50 @@ const TablesPage = () => {
 
   const downloadQR = async (table) => {
     try {
+      if (!table.qr_code_url) throw new Error("No QR code URL");
+      
+      const img = new Image();
+      img.crossOrigin = "Anonymous";
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+        img.src = table.qr_code_url;
+      });
+
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
-      canvas.width = 300; canvas.height = 350;
-      ctx.fillStyle = '#FFFFFF';
+      canvas.width = 300; canvas.height = 400;
+      
+      // Background
+      ctx.fillStyle = '#0f0f0f';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = '#000000';
-      ctx.font = 'bold 24px Inter, sans-serif';
+      
+      // Header text
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = 'bold 24px sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText(table.table_number, canvas.width / 2, 40);
+      
+      // Draw QR image
+      ctx.drawImage(img, 50, 60, 200, 200);
+      
+      // Subtext
+      ctx.font = '14px sans-serif';
+      ctx.fillStyle = '#aaaaaa';
+      ctx.fillText('Scan QR to view menu', canvas.width / 2, 290);
+      
+      // URL text
       const menuUrl = `${window.location.origin}/menu/${table.id}`;
-      ctx.font = '14px Inter, sans-serif';
+      ctx.font = '10px monospace'; 
       ctx.fillStyle = '#666666';
-      ctx.fillText('Scan QR to view menu', canvas.width / 2, 70);
-      const lines = `QR Code for:\n${menuUrl}`.split('\n');
-      ctx.font = '12px monospace'; ctx.fillStyle = '#333333';
-      lines.forEach((line, i) => ctx.fillText(line, canvas.width / 2, 120 + i * 20));
-      ctx.font = 'bold 16px Inter, sans-serif';
+      ctx.fillText(menuUrl, canvas.width / 2, 320);
+      
+      // Branding
+      ctx.font = 'bold 16px sans-serif';
       ctx.fillStyle = '#F59E0B';
-      ctx.fillText('Byte Cafe', canvas.width / 2, 320);
+      ctx.fillText('Cafe Fillo', canvas.width / 2, 370);
+      
+      // Download
       const link = document.createElement('a');
       link.download = `${table.table_number.replace(/\s+/g, '-').toLowerCase()}-qr.png`;
       link.href = canvas.toDataURL('image/png');
