@@ -2,9 +2,12 @@ import { useState, useEffect } from 'react';
 import api from '../../api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Download, Trash2, ShoppingBag, Plus, Grid3x3 } from 'lucide-react';
+import AppDialog, { useDialog } from '../../components/AppDialog';
 
 const TablesPage = () => {
   const [tables, setTables] = useState([]);
+  const [tableInput, setTableInput] = useState('');
+  const { showAlert, showConfirm, dialogState, closeDialog } = useDialog();
 
   const fetchTables = async () => {
     try {
@@ -18,13 +21,28 @@ const TablesPage = () => {
   useEffect(() => { fetchTables(); }, []);
 
   const createTable = async () => {
-    const tableNumber = prompt('Enter Table Number (e.g. Table 11):');
+    const tableNumber = tableInput.trim() || window.prompt('Enter Table Number (e.g. Table 11):');
     if (!tableNumber) return;
     try {
       await api.post('/tables', { table_number: tableNumber });
       fetchTables();
     } catch (err) {
-      alert('Error creating table');
+      await showAlert('Error creating table. Please try again.', { title: 'Error', danger: true });
+    }
+  };
+
+  const handleDeleteTable = async (table) => {
+    const confirmed = await showConfirm(`Delete ${table.table_number}? This cannot be undone.`, {
+      title: 'Delete Table',
+      danger: true,
+      confirmLabel: 'Delete'
+    });
+    if (!confirmed) return;
+    try {
+      await api.delete(`/tables/${table.id}`);
+      fetchTables();
+    } catch (err) {
+      await showAlert(err.response?.data?.message || 'Error deleting table.', { title: 'Error', danger: true });
     }
   };
 
@@ -54,7 +72,7 @@ const TablesPage = () => {
       link.href = canvas.toDataURL('image/png');
       link.click();
     } catch (err) {
-      alert('Failed to download QR code');
+      await showAlert('Failed to download QR code.', { title: 'Error', danger: true });
     }
   };
 
@@ -132,15 +150,7 @@ const TablesPage = () => {
                   <Download size={12} /> QR
                 </button>
                 <button
-                  onClick={async () => {
-                    if (!confirm(`Delete ${table.table_number}?`)) return;
-                    try {
-                      await api.delete(`/tables/${table.id}`);
-                      fetchTables();
-                    } catch (err) {
-                      alert(err.response?.data?.message || 'Error deleting table');
-                    }
-                  }}
+                  onClick={() => handleDeleteTable(table)}
                   className="px-3 py-2.5 bg-red-500/5 border border-red-500/10 text-red-400/60 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-colors"
                 >
                   <Trash2 size={13} />
@@ -150,6 +160,7 @@ const TablesPage = () => {
           </motion.div>
         ))}
       </div>
+      <AppDialog dialogState={dialogState} closeDialog={closeDialog} />
     </div>
   );
 };

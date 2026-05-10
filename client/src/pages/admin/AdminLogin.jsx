@@ -9,11 +9,13 @@ const AdminLogin = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [loginError, setLoginError] = useState('');
   const { login } = useAuthStore();
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setLoginError('');
     setIsLoading(true);
     try {
       const res = await api.post('/auth/login', { email, password });
@@ -22,7 +24,7 @@ const AdminLogin = () => {
         navigate('/admin/dashboard');
       }
     } catch (err) {
-      alert('Login failed: ' + (err.response?.data?.message || err.message));
+      setLoginError(err.response?.data?.message || 'Invalid credentials. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -84,6 +86,13 @@ const AdminLogin = () => {
                 />
               </div>
             </div>
+
+            {loginError && (
+              <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/20 text-red-400 text-sm rounded-xl px-4 py-3">
+                <span className="mt-0.5">⚠</span>
+                <span>{loginError}</span>
+              </div>
+            )}
 
             <motion.button
               type="submit"

@@ -11,7 +11,7 @@ const getKot = (req, res) => {
   
   for (const kot of kots) {
     kot.items = db.prepare(`
-      SELECT oi.*, m.name, m.is_veg 
+      SELECT oi.*, m.name, m.is_veg, m.description, m.category
       FROM order_items oi 
       JOIN menu_items m ON oi.menu_item_id = m.id 
       WHERE oi.order_id = ?
@@ -46,7 +46,7 @@ const getKotHistory = (req, res) => {
   
   for (const kot of kots) {
     kot.items = db.prepare(`
-      SELECT oi.*, m.name, m.is_veg 
+      SELECT oi.*, m.name, m.is_veg, m.description, m.category
       FROM order_items oi 
       JOIN menu_items m ON oi.menu_item_id = m.id 
       WHERE oi.order_id = ?

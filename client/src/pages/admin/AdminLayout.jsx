@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../store';
-import { LayoutDashboard, ListOrdered, MenuSquare, Grid, BarChart3, History, LogOut, Receipt, Users, ChefHat } from 'lucide-react';
+import { LayoutDashboard, ListOrdered, MenuSquare, Grid, BarChart3, History, LogOut, Receipt, Users } from 'lucide-react';
 import { io } from 'socket.io-client';
 
 const AdminLayout = () => {
@@ -69,15 +69,10 @@ const AdminLayout = () => {
       <aside className="w-64 bg-[#0f0f0f] border-r border-white/5 flex flex-col">
         {/* Brand */}
         <div className="px-6 py-6 border-b border-white/5">
-          <div className="flex items-center gap-3 mb-1">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-amber-700 flex items-center justify-center shadow-[0_0_10px_rgba(251,191,36,0.3)]">
-              <ChefHat size={16} className="text-black" strokeWidth={2} />
-            </div>
-            <h2 className="text-lg font-serif font-black bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-600 bg-clip-text text-transparent tracking-tight">
-              Cafe Fillo
-            </h2>
-          </div>
-          <p className="text-xs text-gray-600 truncate mt-1 pl-11 font-medium">{email}</p>
+          <h2 className="text-lg font-serif font-black bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-600 bg-clip-text text-transparent tracking-tight mb-1">
+            Cafe Fillo
+          </h2>
+          <p className="text-xs text-gray-600 truncate font-medium">{email}</p>
         </div>
 
         {/* Nav */}

@@ -3,6 +3,7 @@ import api from '../../api';
 import { toISTFull } from '../../lib/utils';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Trash2, History } from 'lucide-react';
+import AppDialog, { useDialog } from '../../components/AppDialog';
 
 const selectClass = "bg-[#0f0f0f] border border-white/10 text-gray-300 text-sm rounded-xl px-3 py-2.5 outline-none focus:ring-1 focus:ring-amber-500/50 transition-all";
 
@@ -10,6 +11,7 @@ const KOTHistory = () => {
   const [kots, setKots] = useState([]);
   const [sortOption, setSortOption] = useState('Newest First');
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
+  const { showAlert, showConfirm, dialogState, closeDialog } = useDialog();
 
   useEffect(() => {
     const fetchHistory = async () => {
@@ -27,12 +29,17 @@ const KOTHistory = () => {
   }, [dateRange]);
 
   const clearHistory = async () => {
-    if (!confirm('Clear ALL KOT history? This cannot be undone.')) return;
+    const confirmed = await showConfirm('Clear ALL KOT history? This cannot be undone.', {
+      title: 'Clear KOT History',
+      danger: true,
+      confirmLabel: 'Yes, Clear'
+    });
+    if (!confirmed) return;
     try {
       await api.delete('/kot/history/clear');
       const res = await api.get('/kot/history');
       setKots(res.data.data);
-    } catch (err) { alert('Error clearing history'); }
+    } catch (err) { await showAlert('Error clearing history.', { title: 'Error', danger: true }); }
   };
 
   const sortedKots = [...kots].sort((a, b) => {
@@ -108,14 +115,44 @@ const KOTHistory = () => {
                   <span className="font-black text-amber-500 font-mono text-sm">{kot.kot_number}</span>
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-300 font-medium">{kot.table_number}</td>
-                <td className="px-6 py-4 text-sm text-gray-500 max-w-xs">
-                  {kot.items.map((item, i) => (
-                    <span key={i}>
-                      <span className="text-amber-500/70 font-bold">{item.quantity}x</span> {item.name}
-                      {item.special_notes?.trim() ? <span className="text-amber-500/50 italic"> ({item.special_notes})</span> : ''}
-                      {i < kot.items.length - 1 ? ', ' : ''}
-                    </span>
-                  ))}
+                <td className="px-6 py-4 text-sm text-gray-500 max-w-sm">
+                  <div className="space-y-2">
+                    {kot.items.map((item, i) => {
+                      const isCombo = item.category === 'Combo Meals' || (item.description || '').includes('- ');
+                      const subItems = isCombo
+                        ? (item.description || '')
+                            .split('\n')
+                            .map(l => l.trim())
+                            .filter(l => l.startsWith('- '))
+                            .map(l => l.slice(2).trim())
+                        : [];
+                      return (
+                        <div key={i} className={isCombo ? 'bg-amber-500/5 border border-amber-500/10 rounded-lg p-2' : ''}>
+                          <div className="flex items-start gap-1.5">
+                            <span className="text-amber-500/70 font-black text-xs mt-0.5">{item.quantity}×</span>
+                            <div className="flex-1">
+                              <span className="text-gray-300 font-medium">
+                                {item.name}
+                                {isCombo && <span className="ml-1.5 text-[9px] bg-amber-500/20 text-amber-400 border border-amber-500/30 px-1.5 py-0.5 rounded-full font-black uppercase tracking-wider">Combo</span>}
+                              </span>
+                              {item.special_notes?.trim() && (
+                                <span className="ml-1.5 text-amber-400/50 italic text-xs">({item.special_notes})</span>
+                              )}
+                              {subItems.length > 0 && (
+                                <div className="mt-1 space-y-0.5 pl-2 border-l border-amber-500/20">
+                                  {subItems.map((sub, j) => (
+                                    <p key={j} className="text-xs text-amber-400/60 leading-tight">
+                                      <span className="text-amber-600 mr-1">›</span>{sub}
+                                    </p>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </td>
                 <td className="px-6 py-4 text-xs text-gray-500 whitespace-nowrap">{toISTFull(kot.generated_at)}</td>
               </motion.tr>
@@ -123,6 +160,7 @@ const KOTHistory = () => {
           </tbody>
         </table>
       </motion.div>
+      <AppDialog dialogState={dialogState} closeDialog={closeDialog} />
     </div>
   );
 };

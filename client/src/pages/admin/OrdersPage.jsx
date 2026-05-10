@@ -4,6 +4,7 @@ import { toISTFull } from '../../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import * as XLSX from 'xlsx';
 import { Download, Trash2, X, FileText } from 'lucide-react';
+import AppDialog, { useDialog } from '../../components/AppDialog';
 
 
 const STATUS_COLORS = {
@@ -102,6 +103,7 @@ const OrdersPage = () => {
   const [dishReport, setDishReport] = useState([]);
   const [sortConfig, setSortConfig] = useState({ key: 'placed_at', direction: 'desc' });
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
+  const { showAlert, showConfirm, dialogState, closeDialog } = useDialog();
 
   const handleSort = (key) => {
     setSortConfig(prev => ({ key, direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc' }));
@@ -142,19 +144,13 @@ const OrdersPage = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const clearHistory = () => {
-    show({
-      type: 'confirm',
-      title: 'Clear Billed History?',
-      message: 'This will permanently remove all billed order records. This cannot be undone.',
-      confirmLabel: 'Clear History',
-      onConfirm: async () => {
-        try {
-          await api.delete('/orders/history/clear');
-          const res = await api.get('/orders'); setOrders(res.data.data);
-        } catch { show({ type: 'error', title: 'Error', message: 'Failed to clear history. Please try again.' }); }
-      }
-    });
+  const clearHistory = async () => {
+    const confirmed = await showConfirm('Clear ALL billed order history? This cannot be undone.', { title: 'Clear History', danger: true, confirmLabel: 'Yes, Clear' });
+    if (!confirmed) return;
+    try {
+      await api.delete('/orders/history/clear');
+      const res = await api.get('/orders'); setOrders(res.data.data);
+    } catch (err) { await showAlert('Error clearing history.', { title: 'Error', danger: true }); }
   };
 
   const getTableReport = () => {
@@ -344,6 +340,7 @@ const OrdersPage = () => {
       <AnimatePresence>
         {selectedOrder && <OrderDetailModal order={selectedOrder} onClose={() => setSelectedOrder(null)} />}
       </AnimatePresence>
+      <AppDialog dialogState={dialogState} closeDialog={closeDialog} />
     </div>
   );
 };

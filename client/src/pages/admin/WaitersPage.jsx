@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../../api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, X, UserCircle2, Pencil, Trash2 } from 'lucide-react';
+import AppDialog, { useDialog } from '../../components/AppDialog';
 
 const inputClass = "w-full bg-white/5 border border-white/10 rounded-xl p-3 text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-amber-500/50 focus:border-amber-500/50 transition-all placeholder:text-gray-600";
 const labelClass = "block text-xs text-gray-500 uppercase tracking-widest font-bold mb-2";
@@ -12,6 +13,7 @@ const WaitersPage = () => {
   const [editingWaiter, setEditingWaiter] = useState(null);
   const [form, setForm] = useState({ name: '', userid: '', password: '', is_active: 1 });
   const [error, setError] = useState('');
+  const { showAlert, showConfirm, dialogState, closeDialog } = useDialog();
 
   const fetchWaiters = async () => {
     try {
@@ -51,18 +53,19 @@ const WaitersPage = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('Delete this waiter account?')) return;
+    const confirmed = await showConfirm('Delete this waiter account? This cannot be undone.', { title: 'Delete Waiter', danger: true, confirmLabel: 'Delete' });
+    if (!confirmed) return;
     try {
       await api.delete(`/waiters/${id}`);
       fetchWaiters();
-    } catch (err) { alert('Error deleting waiter'); }
+    } catch (err) { await showAlert('Error deleting waiter.', { title: 'Error', danger: true }); }
   };
 
   const toggleActive = async (waiter) => {
     try {
       await api.put(`/waiters/${waiter.id}`, { is_active: waiter.is_active ? 0 : 1 });
       fetchWaiters();
-    } catch (err) { alert('Error updating status'); }
+    } catch (err) { await showAlert('Error updating status.', { title: 'Error', danger: true }); }
   };
 
   return (
@@ -195,6 +198,7 @@ const WaitersPage = () => {
           </motion.div>
         )}
       </AnimatePresence>
+      <AppDialog dialogState={dialogState} closeDialog={closeDialog} />
     </div>
   );
 };

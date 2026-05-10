@@ -94,27 +94,55 @@ const KOTCard = ({ kot, onStatusUpdate }) => {
       </div>
 
       {/* Items */}
-      <div className="flex-1 px-4 py-3 space-y-2.5 overflow-y-auto max-h-64">
+      <div className="flex-1 px-4 py-3 space-y-3 overflow-y-auto max-h-72">
         {kot.items.map((item, idx) => {
           const notesLower = (item.special_notes || '').toLowerCase();
           const isHalfJain = notesLower.includes('half jain');
           const isJain = !isHalfJain && notesLower.includes('jain');
+          const isCombo = item.category === 'Combo Meals' || (item.description || '').includes('- ');
+
+          // Parse combo sub-items from description (lines starting with "- ")
+          const subItems = isCombo
+            ? (item.description || '')
+                .split('\n')
+                .map(l => l.trim())
+                .filter(l => l.startsWith('- '))
+                .map(l => l.slice(2).trim())
+            : [];
+
           return (
-            <div key={idx} className="flex gap-3 items-start">
-              <span className="font-black text-amber-500 text-base min-w-[2rem]">{item.quantity}×</span>
-              <div className="flex-1">
-                <p className={`font-bold text-base leading-tight ${
-                  isHalfJain ? 'text-yellow-300' : isJain ? 'text-red-300' : 'text-gray-200'
-                }`}>
-                  {item.name}
-                  {isHalfJain && <span className="ml-1.5 text-[10px] bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 px-1.5 py-0.5 rounded-full font-black uppercase tracking-wider">Half Jain</span>}
-                  {isJain && <span className="ml-1.5 text-[10px] bg-red-500/20 text-red-400 border border-red-500/30 px-1.5 py-0.5 rounded-full font-black uppercase tracking-wider">Jain</span>}
-                </p>
-                {item.special_notes?.trim() && (
-                  <span className="inline-block mt-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[11px] px-2 py-0.5 rounded-lg font-bold">
-                    📝 {item.special_notes}
-                  </span>
-                )}
+            <div key={idx} className={`${isCombo ? 'bg-amber-500/5 border border-amber-500/10 rounded-xl p-2.5' : ''}`}>
+              <div className="flex gap-3 items-start">
+                <span className="font-black text-amber-500 text-base min-w-[2rem]">{item.quantity}×</span>
+                <div className="flex-1">
+                  <p className={`font-bold text-base leading-tight ${
+                    isHalfJain ? 'text-yellow-300' : isJain ? 'text-red-300' : 'text-gray-200'
+                  }`}>
+                    {item.name}
+                    {isCombo && (
+                      <span className="ml-2 text-[10px] bg-amber-500/20 text-amber-400 border border-amber-500/30 px-1.5 py-0.5 rounded-full font-black uppercase tracking-wider">Combo</span>
+                    )}
+                    {isHalfJain && <span className="ml-1.5 text-[10px] bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 px-1.5 py-0.5 rounded-full font-black uppercase tracking-wider">Half Jain</span>}
+                    {isJain && <span className="ml-1.5 text-[10px] bg-red-500/20 text-red-400 border border-red-500/30 px-1.5 py-0.5 rounded-full font-black uppercase tracking-wider">Jain</span>}
+                  </p>
+
+                  {/* Combo sub-items */}
+                  {subItems.length > 0 && (
+                    <div className="mt-2 space-y-1 pl-1 border-l-2 border-amber-500/20">
+                      {subItems.map((sub, i) => (
+                        <p key={i} className="text-xs text-amber-400/70 font-medium leading-tight">
+                          <span className="text-amber-600 mr-1.5">›</span>{sub}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+
+                  {item.special_notes?.trim() && (
+                    <span className="inline-block mt-1.5 bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[11px] px-2 py-0.5 rounded-lg font-bold">
+                      📝 {item.special_notes}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           );
