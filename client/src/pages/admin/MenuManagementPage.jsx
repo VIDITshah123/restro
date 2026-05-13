@@ -516,7 +516,10 @@ const MenuManagementPage = () => {
                 <div key={v.id} className="flex items-center justify-between bg-white/5 border border-white/10 rounded-xl px-4 py-2.5">
                   <span className="font-medium text-sm text-gray-300">{v.name}</span>
                   <div className="flex items-center gap-4">
-                    <span className="font-black text-amber-500 text-sm">{v.price > 0 ? `+₹${v.price}` : `-₹${Math.abs(v.price)}`}</span>
+                    <div className="flex flex-col text-right">
+                      <span className="font-black text-amber-500 text-sm">{v.price > 0 ? `+₹${v.price}` : `-₹${Math.abs(v.price)}`}</span>
+                      <span className="text-[10px] text-gray-500 font-bold">Cost: ₹{v.cost_price || 0}</span>
+                    </div>
                     <button onClick={() => deleteVariant(v.id)} className="text-red-400/70 hover:text-red-400 text-xs font-bold transition-colors">Remove</button>
                   </div>
                 </div>

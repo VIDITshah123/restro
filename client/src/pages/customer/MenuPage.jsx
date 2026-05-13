@@ -50,12 +50,15 @@ const MenuPage = () => {
     if (customOptions.text) notes.push(customOptions.text);
 
     const addonsPrice = customOptions.selectedVariants.reduce((sum, v) => sum + v.price, 0);
+    const addonsCostPrice = customOptions.selectedVariants.reduce((sum, v) => sum + (v.cost_price || 0), 0);
     const effectivePrice = customizingItem.price + addonsPrice;
+    const effectiveCostPrice = (customizingItem.cost_price || 0) + addonsCostPrice;
 
     addItem({
       menuItemId: customizingItem.id,
       name: customizingItem.name,
       price: effectivePrice,
+      cost_price: effectiveCostPrice,
       is_veg: customizingItem.is_veg,
       specialNotes: notes.join(', '),
       quantity: customQty

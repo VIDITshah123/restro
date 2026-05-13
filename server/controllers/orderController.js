@@ -10,7 +10,7 @@ const createOrder = (req, res) => {
     const orderNumber = (maxRow && maxRow.max_num) ? maxRow.max_num + 1 : 1;
 
     const insertOrder = db.prepare('INSERT INTO orders (table_id, total_amount, customer_name, order_number) VALUES (?, ?, ?, ?)');
-    const insertOrderItem = db.prepare('INSERT INTO order_items (order_id, menu_item_id, quantity, price, special_notes) VALUES (?, ?, ?, ?, ?)');
+    const insertOrderItem = db.prepare('INSERT INTO order_items (order_id, menu_item_id, quantity, price, cost_price, special_notes) VALUES (?, ?, ?, ?, ?, ?)');
     
     const total_amount = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
@@ -20,7 +20,7 @@ const createOrder = (req, res) => {
       orderId = orderInfo.lastInsertRowid;
       
       for (const item of items) {
-        insertOrderItem.run(orderId, item.menuItemId, item.quantity, item.price, item.specialNotes || '');
+        insertOrderItem.run(orderId, item.menuItemId, item.quantity, item.price, item.costPrice || 0, item.specialNotes || '');
       }
 
       // Generate KOT

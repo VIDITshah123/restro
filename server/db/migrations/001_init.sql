@@ -60,6 +60,7 @@ CREATE TABLE IF NOT EXISTS order_items (
   menu_item_id   INTEGER NOT NULL REFERENCES menu_items(id),
   quantity       INTEGER NOT NULL DEFAULT 1,
   price          REAL    NOT NULL DEFAULT 0,
+  cost_price     REAL    NOT NULL DEFAULT 0,
   special_notes  TEXT    DEFAULT ''
 );
 

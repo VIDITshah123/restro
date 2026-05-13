@@ -47,7 +47,8 @@ const CartPage = () => {
           menuItemId: i.menuItemId,
           quantity: i.quantity,
           specialNotes: i.specialNotes,
-          price: i.price
+          price: i.price,
+          costPrice: i.cost_price
         }))
       });
       

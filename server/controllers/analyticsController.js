@@ -60,7 +60,7 @@ const getComprehensiveAnalytics = (req, res) => {
     const profitData = db.prepare(`
       SELECT 
         COALESCE(SUM(oi.price * oi.quantity), 0) as grossSales,
-        COALESCE(SUM(m.cost_price * oi.quantity), 0) as totalCost
+        COALESCE(SUM(oi.cost_price * oi.quantity), 0) as totalCost
       FROM order_items oi
       JOIN menu_items m ON oi.menu_item_id = m.id
       JOIN orders o ON oi.order_id = o.id
@@ -72,7 +72,7 @@ const getComprehensiveAnalytics = (req, res) => {
     const todayProfitData = db.prepare(`
       SELECT 
         COALESCE(SUM(oi.price * oi.quantity), 0) as grossSales,
-        COALESCE(SUM(m.cost_price * oi.quantity), 0) as totalCost
+        COALESCE(SUM(oi.cost_price * oi.quantity), 0) as totalCost
       FROM order_items oi
       JOIN menu_items m ON oi.menu_item_id = m.id
       JOIN orders o ON oi.order_id = o.id
