@@ -26,8 +26,7 @@ client/build/
 server/dist/
 
 # Database Files
-# Uncomment below if you want to ignore the local SQLite database
-# server/data/*.db
+server/data/*.db
 # server/data/*.sqlite
 # server/data/*-wal
 # server/data/*-shm
