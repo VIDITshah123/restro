@@ -49,7 +49,7 @@ const TablesPage = () => {
   const downloadQR = async (table) => {
     try {
       if (!table.qr_code_url) throw new Error("No QR code URL");
-      
+
       const img = new Image();
       img.crossOrigin = "Anonymous";
       await new Promise((resolve, reject) => {
@@ -61,36 +61,36 @@ const TablesPage = () => {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       canvas.width = 300; canvas.height = 400;
-      
+
       // Background
       ctx.fillStyle = '#0f0f0f';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-      
+
       // Header text
       ctx.fillStyle = '#FFFFFF';
       ctx.font = 'bold 24px sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText(table.table_number, canvas.width / 2, 40);
-      
+
       // Draw QR image
       ctx.drawImage(img, 50, 60, 200, 200);
-      
+
       // Subtext
       ctx.font = '14px sans-serif';
       ctx.fillStyle = '#aaaaaa';
       ctx.fillText('Scan QR to view menu', canvas.width / 2, 290);
-      
+
       // URL text
       const menuUrl = `${window.location.origin}/menu/${table.id}`;
-      ctx.font = '10px monospace'; 
+      ctx.font = '10px monospace';
       ctx.fillStyle = '#666666';
       ctx.fillText(menuUrl, canvas.width / 2, 320);
-      
+
       // Branding
       ctx.font = 'bold 16px sans-serif';
       ctx.fillStyle = '#F59E0B';
-      ctx.fillText('Cafe Fillo', canvas.width / 2, 370);
-      
+      ctx.fillText('Byte Cafe', canvas.width / 2, 370);
+
       // Download
       const link = document.createElement('a');
       link.download = `${table.table_number.replace(/\s+/g, '-').toLowerCase()}-qr.png`;

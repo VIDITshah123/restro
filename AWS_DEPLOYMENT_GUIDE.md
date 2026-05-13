@@ -1,4 +1,4 @@
-# 🚀 Cafe Fillo: AWS EC2 Deployment Guide
+# 🚀 Byte Cafe: AWS EC2 Deployment Guide
 
 This guide will walk you through deploying your Restaurant Management System to a **Basic Free Tier AWS EC2 Instance** (Ubuntu).
 
