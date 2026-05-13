@@ -13,7 +13,7 @@ def recommendations():
     body = request.json or {}
     cart_ids = body.get('cartItemIds', [])
     session_ids = body.get('sessionItemIds', [])
-    result = recommender.get_similar(cart_ids, exclude=session_ids, top_n=3)
+    result = recommender.get_similar(cart_ids, exclude=session_ids, top_n=5)
     return jsonify({"recommendations": result})
 
 @app.route('/ai/trending')

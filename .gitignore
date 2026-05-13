@@ -25,11 +25,6 @@ client/dist/
 client/build/
 server/dist/
 
-# Database Files
-server/data/*.db
-# server/data/*.sqlite
-# server/data/*-wal
-# server/data/*-shm
 
 # IDE & OS Files
 .vscode/
