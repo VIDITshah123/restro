@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../../api';
 import { motion } from 'framer-motion';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid, Legend } from 'recharts';
 import { Download, TrendingUp, IndianRupee, ShoppingBag, Percent } from 'lucide-react';
 
 const COLORS = ['#f59e0b', '#8b5cf6', '#10b981', '#ef4444', '#3b82f6'];
@@ -159,19 +159,18 @@ const AnalyticsPage = () => {
                   data={data.categoryPerformance}
                   dataKey="revenue"
                   nameKey="category"
-                  cx="50%"
+                  cx="40%"
                   cy="50%"
                   innerRadius={65}
                   outerRadius={90}
                   paddingAngle={4}
-                  label={({ name, percent }) => percent > 0.05 ? `${name}` : ''}
-                  labelLine={false}
                 >
                   {data.categoryPerformance.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
                 <Tooltip {...darkTooltip} formatter={(value) => `₹${value}`} />
+                <Legend verticalAlign="middle" align="right" layout="vertical" iconType="circle" wrapperStyle={{ fontSize: '11px', color: '#9ca3af' }} />
               </PieChart>
             </ResponsiveContainer>
           </div>
