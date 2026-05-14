@@ -108,7 +108,7 @@ app.put('/api/waiters/:id', authenticate, authorize('admin'), waiterController.u
 app.delete('/api/waiters/:id', authenticate, authorize('admin'), waiterController.deleteWaiter);
 
 // Billing — get all unbilled orders for a table
-app.get('/api/billing/:tableId', authenticate, authorize(['admin', 'manager']), orderController.getBillingForTable);
+app.get('/api/billing/:tableId', orderController.getBillingForTable);
 app.post('/api/billing/:tableId/generate', authenticate, authorize(['admin', 'manager']), orderController.generateTableBill);
 app.post('/api/billing/:tableId/request', orderController.requestBillByTable);
 
