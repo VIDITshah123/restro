@@ -110,12 +110,14 @@ const AnalyticsPage = () => {
         </div>
         <div className="flex items-center gap-3 flex-wrap">
           {/* Date Range */}
+          {/*
           <div className="flex items-center gap-2 bg-[#0f0f0f] border border-white/10 rounded-xl px-4 py-2.5">
             <span className="text-xs text-gray-500 uppercase tracking-wider">From</span>
             <input type="date" value={dateRange.start} onChange={e => setDateRange(p => ({ ...p, start: e.target.value }))} className="text-sm bg-transparent text-gray-300 outline-none" />
             <span className="text-xs text-gray-500 uppercase tracking-wider">To</span>
             <input type="date" value={dateRange.end} onChange={e => setDateRange(p => ({ ...p, end: e.target.value }))} className="text-sm bg-transparent text-gray-300 outline-none" />
           </div>
+          */}
           <button onClick={downloadSummaryReport} className="flex items-center gap-2 bg-white/5 border border-white/10 text-gray-400 hover:text-gray-200 hover:bg-white/10 px-4 py-2.5 rounded-xl font-medium text-sm transition-all">
             <Download size={15} /> Summary
           </button>
@@ -140,7 +142,7 @@ const AnalyticsPage = () => {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={data.topDishes}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.04)" />
-                <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#4b5563' }} axisLine={false} tickLine={false} interval={0} />
+                <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#4b5563' }} axisLine={false} tickLine={false} interval={0} tickFormatter={(v) => v.length > 15 ? v.substring(0, 15) + '...' : v} />
                 <YAxis tick={{ fontSize: 11, fill: '#4b5563' }} axisLine={false} tickLine={false} />
                 <Tooltip {...darkTooltip} />
                 <Bar dataKey="total_sold" fill="#f59e0b" radius={[6, 6, 0, 0]} />
