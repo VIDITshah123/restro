@@ -129,8 +129,8 @@ const AnalyticsPage = () => {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <KpiCard label="Today's Revenue"     value={`₹${data.summary.revenue}`}             icon={IndianRupee} color="#f59e0b" delay={0}   />
-        <KpiCard label="Today's Orders"      value={data.summary.totalOrders}               icon={ShoppingBag} color="#8b5cf6" delay={0.1} />
+        <KpiCard label="Total Revenue"     value={`₹${data.summary.revenue}`}             icon={IndianRupee} color="#f59e0b" delay={0}   />
+        <KpiCard label="Total Orders"      value={data.summary.totalOrders}               icon={ShoppingBag} color="#8b5cf6" delay={0.1} />
         <KpiCard label="Net Profit"        value={`₹${data.profitData.netProfit}`}        icon={TrendingUp}  color="#10b981" delay={0.2} />
         <KpiCard label="Avg Order Value"   value={`₹${data.summary.avgOrderValue}`}       icon={Percent}     color="#3b82f6" delay={0.3} />
       </div>
@@ -154,13 +154,25 @@ const AnalyticsPage = () => {
         <SectionCard title="Category Revenue (₹)" delay={0.45}>
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data.categoryPerformance} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(255,255,255,0.04)" />
-                <XAxis type="number" tick={{ fontSize: 11, fill: '#4b5563' }} axisLine={false} tickLine={false} />
-                <YAxis dataKey="category" type="category" width={100} tick={{ fontSize: 11, fill: '#6b7280' }} axisLine={false} tickLine={false} />
-                <Tooltip {...darkTooltip} />
-                <Bar dataKey="revenue" fill="#8b5cf6" radius={[0, 6, 6, 0]} />
-              </BarChart>
+              <PieChart>
+                <Pie
+                  data={data.categoryPerformance}
+                  dataKey="revenue"
+                  nameKey="category"
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={65}
+                  outerRadius={90}
+                  paddingAngle={4}
+                  label={({ name, percent }) => percent > 0.05 ? `${name}` : ''}
+                  labelLine={false}
+                >
+                  {data.categoryPerformance.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip {...darkTooltip} formatter={(value) => `₹${value}`} />
+              </PieChart>
             </ResponsiveContainer>
           </div>
         </SectionCard>
