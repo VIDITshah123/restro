@@ -79,7 +79,7 @@ const DashboardPage = () => {
 
       {/* Stat Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
-        <StatCard label="Today's Revenue"     value={stats.revenue}       prefix="₹" icon={IndianRupee} delay={0}    glowColor="rgba(251,191,36,0.04)" />
+        <StatCard label="Total Revenue"       value={stats.revenue}       prefix="₹" icon={IndianRupee} delay={0}    glowColor="rgba(251,191,36,0.04)" />
         <StatCard label="Total Orders"        value={stats.totalOrders}   prefix=""  icon={ShoppingBag}  delay={0.1}  glowColor="rgba(139,92,246,0.04)" />
         <StatCard label="Avg. Order Value"    value={stats.avgOrderValue} prefix="₹" icon={TrendingUp}   delay={0.2}  glowColor="rgba(34,197,94,0.04)" />
       </div>
