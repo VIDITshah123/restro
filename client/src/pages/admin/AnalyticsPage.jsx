@@ -159,7 +159,7 @@ const AnalyticsPage = () => {
                   data={data.categoryPerformance}
                   dataKey="revenue"
                   nameKey="category"
-                  cx="40%"
+                  cx="50%"
                   cy="50%"
                   innerRadius={65}
                   outerRadius={90}
@@ -170,7 +170,6 @@ const AnalyticsPage = () => {
                   ))}
                 </Pie>
                 <Tooltip {...darkTooltip} formatter={(value) => `₹${value}`} />
-                <Legend verticalAlign="middle" align="right" layout="vertical" iconType="circle" wrapperStyle={{ fontSize: '11px', color: '#9ca3af' }} />
               </PieChart>
             </ResponsiveContainer>
           </div>
