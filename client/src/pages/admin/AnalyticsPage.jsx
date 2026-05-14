@@ -129,8 +129,8 @@ const AnalyticsPage = () => {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <KpiCard label="Period Revenue"    value={`₹${data.todaySummary.revenue}`}       icon={IndianRupee} color="#f59e0b" delay={0}   />
-        <KpiCard label="Period Orders"     value={data.todaySummary.totalOrders}          icon={ShoppingBag} color="#8b5cf6" delay={0.1} />
+        <KpiCard label="Today's Revenue"     value={`₹${data.summary.revenue}`}             icon={IndianRupee} color="#f59e0b" delay={0}   />
+        <KpiCard label="Today's Orders"      value={data.summary.totalOrders}               icon={ShoppingBag} color="#8b5cf6" delay={0.1} />
         <KpiCard label="Net Profit"        value={`₹${data.profitData.netProfit}`}        icon={TrendingUp}  color="#10b981" delay={0.2} />
         <KpiCard label="Avg Order Value"   value={`₹${data.summary.avgOrderValue}`}       icon={Percent}     color="#3b82f6" delay={0.3} />
       </div>
