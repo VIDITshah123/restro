@@ -154,6 +154,9 @@ const MenuPage = () => {
     }
   };
 
+  const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+  const cartTotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
   const filteredMenu = menu.filter(item => {
     if (activeCategory !== 'All' && item.category !== activeCategory) return false;
     if (isVegOnly && item.is_veg === 0) return false;
@@ -166,7 +169,7 @@ const MenuPage = () => {
   });
 
   return (
-    <div className="min-h-screen bg-[#0d0d0d] pb-20 font-sans selection:bg-amber-900 selection:text-amber-100 text-gray-200">
+    <div className="min-h-screen bg-[#0d0d0d] pb-32 font-sans selection:bg-amber-900 selection:text-amber-100 text-gray-200">
       {/* Header (Glassmorphism) */}
       <header className="sticky top-0 backdrop-blur-xl bg-[#0d0d0d]/80 border-b border-white/5 shadow-md z-50 px-5 py-4 flex justify-between items-center transition-all duration-500">
         <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5 }}>
@@ -606,6 +609,56 @@ const MenuPage = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Floating Cart Summary Bar */}
+      <AnimatePresence>
+        {cartItems.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 100 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 100 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            onClick={() => navigate('/cart')}
+            className="fixed bottom-6 left-6 right-20 z-40 bg-[#0f0f0f]/90 border border-amber-500/20 rounded-2xl p-4 shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-xl flex items-center justify-between cursor-pointer hover:border-amber-500/40 hover:shadow-[0_8px_32px_rgba(245,158,11,0.15)] transition-all group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-amber-500/10 rounded-xl text-amber-500 group-hover:scale-110 transition-transform">
+                <ShoppingCart size={20} strokeWidth={2} />
+              </div>
+              <div>
+                <motion.p 
+                  key={cartCount}
+                  initial={{ scale: 0.8, opacity: 0.5 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="text-sm font-black text-white"
+                >
+                  {cartCount} Item{cartCount > 1 ? 's' : ''}
+                </motion.p>
+                <p className="text-xs text-gray-500 font-medium">Added to Cart</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-5">
+              <div className="text-right">
+                <motion.p 
+                  key={cartTotal}
+                  initial={{ scale: 0.9 }}
+                  animate={{ scale: 1 }}
+                  className="text-lg font-black text-amber-500"
+                >
+                  ₹{cartTotal}
+                </motion.p>
+                <p className="text-[10px] text-gray-600 font-bold uppercase tracking-wider">Subtotal</p>
+              </div>
+              <div className="bg-amber-500 text-black font-black text-xs px-4 py-2.5 rounded-xl flex items-center gap-1.5 shadow-[0_4px_12px_rgba(245,158,11,0.2)] group-hover:bg-amber-400 group-hover:shadow-[0_4px_15px_rgba(245,158,11,0.35)] transition-all">
+                <span>View Cart</span>
+                <span className="font-serif">→</span>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Floating Call Staff Button */}
       <motion.button
         onClick={callStaff}
