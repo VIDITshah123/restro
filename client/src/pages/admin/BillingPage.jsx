@@ -3,8 +3,9 @@ import { io } from 'socket.io-client';
 import api from '../../api';
 import { toISTFull } from '../../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bell, X, Receipt, Loader2 } from 'lucide-react';
+import { Bell, X, Receipt, Loader2, Printer } from 'lucide-react';
 import AppDialog, { useDialog } from '../../components/AppDialog';
+import ThermalReceipt from '../../components/admin/ThermalReceipt';
 
 const BillingPage = () => {
   const [tables, setTables] = useState([]);
@@ -189,14 +190,24 @@ const BillingPage = () => {
                     </h2>
                     <p className="text-amber-500/60 text-xs mt-1 uppercase tracking-widest">{billing.orders.length} order(s) in session</p>
                   </div>
-                  <motion.button
-                    whileTap={{ scale: 0.97 }}
-                    onClick={handleGenerateBill}
-                    disabled={billing.orders.length === 0}
-                    className="flex items-center gap-2 bg-gradient-to-r from-amber-600 to-amber-500 text-black font-black px-6 py-2.5 rounded-xl shadow-[0_0_15px_rgba(245,158,11,0.2)] hover:shadow-[0_0_20px_rgba(245,158,11,0.35)] transition-all disabled:opacity-40 disabled:cursor-not-allowed uppercase tracking-wider text-sm"
-                  >
-                    <Receipt size={16} /> Generate Bill
-                  </motion.button>
+                  <div className="flex gap-2">
+                    <motion.button
+                      whileTap={{ scale: 0.97 }}
+                      onClick={() => window.print()}
+                      disabled={billing.orders.length === 0}
+                      className="flex items-center gap-2 bg-white/5 border border-white/10 text-gray-300 font-bold px-4 py-2.5 rounded-xl hover:bg-white/10 transition-all disabled:opacity-40 disabled:cursor-not-allowed uppercase tracking-wider text-xs cursor-pointer"
+                    >
+                      <Printer size={14} /> Print Receipt
+                    </motion.button>
+                    <motion.button
+                      whileTap={{ scale: 0.97 }}
+                      onClick={handleGenerateBill}
+                      disabled={billing.orders.length === 0}
+                      className="flex items-center gap-2 bg-gradient-to-r from-amber-600 to-amber-500 text-black font-black px-4 py-2.5 rounded-xl shadow-[0_0_15px_rgba(245,158,11,0.2)] hover:shadow-[0_0_20px_rgba(245,158,11,0.35)] transition-all disabled:opacity-40 disabled:cursor-not-allowed uppercase tracking-wider text-xs"
+                    >
+                      <Receipt size={14} /> Generate Bill
+                    </motion.button>
+                  </div>
                 </div>
 
                 {/* Payment method selector — always visible & reactive */}
@@ -292,6 +303,16 @@ const BillingPage = () => {
 
       {/* Custom Dialog */}
       <AppDialog dialogState={dialogState} closeDialog={closeDialog} />
+
+      {/* Hidden print receipt area */}
+      {billing && (
+        <ThermalReceipt
+          tableNumber={tables.find(t => t.id === selectedTable)?.table_number}
+          orders={billing.orders}
+          grandTotal={billing.grandTotal}
+          paymentMethod={paymentMethod}
+        />
+      )}
     </div>
   );
 };

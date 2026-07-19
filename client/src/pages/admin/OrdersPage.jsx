@@ -3,8 +3,9 @@ import api from '../../api';
 import { toISTFull } from '../../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import * as XLSX from 'xlsx';
-import { Download, Trash2, X, FileText } from 'lucide-react';
+import { Download, Trash2, X, FileText, Printer } from 'lucide-react';
 import AppDialog, { useDialog } from '../../components/AppDialog';
+import ThermalReceipt from '../../components/admin/ThermalReceipt';
 
 
 const STATUS_COLORS = {
@@ -62,9 +63,16 @@ const OrderDetailModal = ({ order, onClose }) => {
             <h2 className="text-xl font-serif font-black text-gray-100">Order #{order.id}</h2>
             <p className="text-amber-500/60 text-xs mt-1 uppercase tracking-widest">{order.table_number} · {order.customer_name || 'Guest'}</p>
           </div>
-          <button onClick={onClose} className="text-gray-600 hover:text-gray-300 bg-white/5 rounded-full p-1.5 transition-colors">
-            <X size={16} />
-          </button>
+          <div className="flex items-center gap-2">
+            {details && (
+              <button onClick={() => window.print()} className="text-gray-400 hover:text-gray-200 bg-white/5 rounded-full p-1.5 transition-colors cursor-pointer" title="Print Receipt">
+                <Printer size={16} />
+              </button>
+            )}
+            <button onClick={onClose} className="text-gray-600 hover:text-gray-300 bg-white/5 rounded-full p-1.5 transition-colors">
+              <X size={16} />
+            </button>
+          </div>
         </div>
         <div className="p-6">
           {loading ? (
@@ -91,6 +99,14 @@ const OrderDetailModal = ({ order, onClose }) => {
             <p className="text-gray-600 text-center py-8">No details available</p>
           )}
         </div>
+        {details && (
+          <ThermalReceipt
+            tableNumber={order.table_number || `Table ${order.table_id}`}
+            orders={[details]}
+            grandTotal={details.total_amount}
+            paymentMethod={details.payment_method || 'Cash'}
+          />
+        )}
       </motion.div>
     </motion.div>
   );

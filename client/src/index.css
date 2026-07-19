@@ -45,3 +45,28 @@
     padding-bottom: env(safe-area-inset-bottom);
   }
 }
+
+#print-receipt-area {
+  display: none;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #print-receipt-area, #print-receipt-area * {
+    visibility: visible;
+  }
+  #print-receipt-area {
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    background: white;
+    color: black;
+  }
+}
+
