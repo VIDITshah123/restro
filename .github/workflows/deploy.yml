@@ -22,7 +22,16 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
           script: |
-            # Ensure the deployment script has executable permissions
-            chmod +x /home/ubuntu/restro/deploy.sh
-            # Run the deployment script
-            /home/ubuntu/restro/deploy.sh
+            # Clone repository if it does not exist, then navigate to it
+            if [ ! -d "/home/ubuntu/restro" ]; then
+              git clone https://github.com/VIDITshah123/restro.git /home/ubuntu/restro
+            fi
+            cd /home/ubuntu/restro
+            
+            # Fetch latest changes so that deploy.sh is updated before running
+            git fetch origin main
+            git reset --hard origin/main
+            
+            # Make deploy.sh executable and run it
+            chmod +x deploy.sh
+            ./deploy.sh
