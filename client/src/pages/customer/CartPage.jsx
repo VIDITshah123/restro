@@ -34,15 +34,11 @@ const CartPage = () => {
 
   const placeOrder = async () => {
     if (!tableId || items.length === 0) return;
-    if (!customerName.trim()) {
-      alert('Please enter your name to place the order.');
-      return;
-    }
     setIsSubmitting(true);
     try {
       const res = await api.post('/orders', {
         tableId,
-        customerName: customerName.trim(),
+        customerName: 'Guest',
         items: items.map(i => ({
           menuItemId: i.menuItemId,
           quantity: i.quantity,
@@ -150,15 +146,7 @@ const CartPage = () => {
           <span className="font-serif text-gray-400 tracking-wider">Grand Total</span>
           <span className="text-3xl font-black text-amber-500">₹{getTotal()}</span>
         </div>
-        <div className="relative mb-4 group">
-          <input 
-            type="text" 
-            placeholder="Your Name (Required)" 
-            value={customerName}
-            onChange={(e) => setCustomerName(e.target.value)}
-            className="w-full text-base p-4 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-1 focus:ring-amber-500/50 focus:border-amber-500/50 transition-all font-medium placeholder:text-gray-600 text-gray-200"
-          />
-        </div>
+        {/* Customer Name input removed to allow direct ordering */}
         <button 
           onClick={placeOrder}
           disabled={isSubmitting}

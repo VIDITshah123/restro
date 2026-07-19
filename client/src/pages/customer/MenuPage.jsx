@@ -517,7 +517,7 @@ const MenuPage = () => {
                         {billOrders.map(order => (
                           <div key={order.id} className="border border-white/10 rounded-2xl overflow-hidden bg-white/5">
                             <div className="bg-black/40 px-5 py-3 flex justify-between items-center text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-white/5">
-                              <span>Order #{order.id} — {order.customer_name || 'Guest'}</span>
+                              <span>Order #{order.id}</span>
                               {(() => {
                                 const status = order.kot_status || order.status;
                                 if (!status) return null;

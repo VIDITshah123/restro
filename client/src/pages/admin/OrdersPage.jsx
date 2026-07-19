@@ -61,7 +61,7 @@ const OrderDetailModal = ({ order, onClose }) => {
         <div className="sticky top-0 bg-[#0f0f0f]/95 backdrop-blur-xl border-b border-white/10 px-6 py-5 flex justify-between items-start">
           <div>
             <h2 className="text-xl font-serif font-black text-gray-100">Order #{order.id}</h2>
-            <p className="text-amber-500/60 text-xs mt-1 uppercase tracking-widest">{order.table_number} · {order.customer_name || 'Guest'}</p>
+            <p className="text-amber-500/60 text-xs mt-1 uppercase tracking-widest">{order.table_number}</p>
           </div>
           <div className="flex items-center gap-2">
             {details && (
@@ -133,8 +133,8 @@ const OrdersPage = () => {
       result = result.filter(o => new Date(o.placed_at) < end);
     }
     result.sort((a, b) => {
-      let aVal = sortConfig.key === 'customer_name' ? (a.customer_name || 'Guest').toLowerCase() : a[sortConfig.key];
-      let bVal = sortConfig.key === 'customer_name' ? (b.customer_name || 'Guest').toLowerCase() : b[sortConfig.key];
+      let aVal = a[sortConfig.key];
+      let bVal = b[sortConfig.key];
       if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
       if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
       return 0;
@@ -199,7 +199,7 @@ const OrdersPage = () => {
 
   const handleExport = () => {
     let dataToExport = [];
-    if (reportType === 'Order Wise') dataToExport = filteredAndSortedOrders.map(o => ({ OrderID: o.id, Table: o.table_number, Customer: o.customer_name || 'Guest', Total: o.total_amount, Payment: o.payment_method || 'Unpaid', Status: o.status, Time: toISTFull(o.placed_at) }));
+    if (reportType === 'Order Wise') dataToExport = filteredAndSortedOrders.map(o => ({ OrderID: o.id, Table: o.table_number, Total: o.total_amount, Payment: o.payment_method || 'Unpaid', Status: o.status, Time: toISTFull(o.placed_at) }));
     else if (reportType === 'Table Wise') dataToExport = getTableReport().map(r => ({ Table: r.name, Orders: r.orders, Revenue: r.revenue }));
     else if (reportType === 'Dish Wise') dataToExport = dishReport.map(r => ({ Dish: r.name, QuantitySold: r.total_sold, Revenue: r.revenue }));
     else if (reportType === 'Payment Wise') dataToExport = getPaymentReport().map(r => ({ PaymentMethod: r.name, Orders: r.orders, Revenue: r.revenue }));
@@ -248,7 +248,7 @@ const OrdersPage = () => {
           <table className="w-full text-left">
             <thead>
               <tr className="border-b border-white/5">
-                {[['Order #', 'id'], ['Table', 'table_number'], ['Customer', 'customer_name'], ['Total', 'total_amount'], ['Payment', 'payment_method'], ['Status', 'status'], ['Time', 'placed_at']].map(([l, k]) => (
+                {[['Order #', 'id'], ['Table', 'table_number'], ['Total', 'total_amount'], ['Payment', 'payment_method'], ['Status', 'status'], ['Time', 'placed_at']].map(([l, k]) => (
                   <th key={k} className={thClass} onClick={() => handleSort(k)}>
                     {l} {sortConfig.key === k ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
                   </th>
@@ -257,7 +257,7 @@ const OrdersPage = () => {
             </thead>
             <tbody className="divide-y divide-white/5">
               {orders.length === 0 && (
-                <tr><td colSpan="7" className="px-5 py-14 text-center">
+                <tr><td colSpan="6" className="px-5 py-14 text-center">
                   <FileText size={36} className="mx-auto mb-3 text-gray-700" strokeWidth={1} />
                   <p className="text-gray-600 text-sm uppercase tracking-widest">No orders yet</p>
                 </td></tr>
@@ -273,7 +273,6 @@ const OrdersPage = () => {
                       {order.table_number || `Table ${order.table_id}`}
                     </button>
                   </td>
-                  <td className={`${tdClass} text-gray-400`}>{order.customer_name || 'Guest'}</td>
                   <td className={tdClass}><span className="font-black text-amber-500">₹{order.total_amount}</span></td>
                   <td className={`${tdClass} text-gray-500`}>{order.payment_method || '—'}</td>
                   <td className={tdClass}>

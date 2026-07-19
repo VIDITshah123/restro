@@ -2,21 +2,21 @@ const db = require('../db');
 const kotService = require('../services/kotService');
 
 const createOrder = (req, res) => {
-  const { tableId, items, notes, customerName } = req.body;
+  const { tableId, items, notes } = req.body;
   // items: [{ menuItemId, quantity, specialNotes, price }]
 
   try {
     const maxRow = db.prepare('SELECT MAX(order_number) as max_num FROM orders WHERE is_hidden = 0').get();
     const orderNumber = (maxRow && maxRow.max_num) ? maxRow.max_num + 1 : 1;
 
-    const insertOrder = db.prepare('INSERT INTO orders (table_id, total_amount, customer_name, order_number) VALUES (?, ?, ?, ?)');
+    const insertOrder = db.prepare('INSERT INTO orders (table_id, total_amount, order_number) VALUES (?, ?, ?)');
     const insertOrderItem = db.prepare('INSERT INTO order_items (order_id, menu_item_id, quantity, price, cost_price, special_notes) VALUES (?, ?, ?, ?, ?, ?)');
     
     const total_amount = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
     let orderId;
     db.transaction(() => {
-      const orderInfo = insertOrder.run(tableId, total_amount, customerName || 'Guest', orderNumber);
+      const orderInfo = insertOrder.run(tableId, total_amount, orderNumber);
       orderId = orderInfo.lastInsertRowid;
       
       for (const item of items) {

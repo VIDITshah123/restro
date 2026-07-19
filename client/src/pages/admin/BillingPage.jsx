@@ -239,7 +239,7 @@ const BillingPage = () => {
                   {billing.orders.map(order => (
                     <div key={order.id} className="border border-white/5 rounded-2xl overflow-hidden">
                       <div className="bg-black/40 px-5 py-3 flex justify-between text-xs text-gray-500 uppercase tracking-widest border-b border-white/5">
-                        <span>Order #{order.id} — {order.customer_name || 'Guest'}</span>
+                        <span>Order #{order.id}</span>
                         <span>{toISTFull(order.placed_at)}</span>
                       </div>
                       <table className="w-full text-sm">
