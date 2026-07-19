@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSessionStore, useCartStore } from '../../store';
 import api from '../../api';
-import { ShoppingCart, Receipt, X, CheckCircle, Plus, Minus, CreditCard, FileText } from 'lucide-react';
+import { ShoppingCart, Receipt, X, CheckCircle, Plus, Minus, CreditCard, FileText, BellRing } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { io } from 'socket.io-client';
 
@@ -122,11 +122,14 @@ const MenuPage = () => {
     init();
   }, [tableId]);
 
+  const socketRef = useRef(null);
+
   useEffect(() => {
-    if (!showBillPopup || !tableId) return;
+    if (!tableId) return;
 
     const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
     const socket = io(`${SOCKET_URL}/customer`);
+    socketRef.current = socket;
     socket.emit('join:table', { tableId });
 
     socket.on('kot:statusUpdate', ({ orderId, newStatus }) => {
@@ -138,7 +141,18 @@ const MenuPage = () => {
     });
 
     return () => socket.disconnect();
-  }, [showBillPopup, tableId]);
+  }, [tableId]);
+
+  const callStaff = () => {
+    if (!tableId) return;
+    const confirmCall = window.confirm("Do you want to call a staff member for assistance?");
+    if (confirmCall) {
+      if (socketRef.current) {
+        socketRef.current.emit('help:request', { tableId });
+        alert("A staff member has been notified and will assist you shortly.");
+      }
+    }
+  };
 
   const filteredMenu = menu.filter(item => {
     if (activeCategory !== 'All' && item.category !== activeCategory) return false;
@@ -592,6 +606,16 @@ const MenuPage = () => {
           </motion.div>
         )}
       </AnimatePresence>
+      {/* Floating Call Staff Button */}
+      <motion.button
+        onClick={callStaff}
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.9 }}
+        className="fixed bottom-6 right-6 z-[90] p-4 bg-gradient-to-r from-amber-600 to-amber-500 text-black font-bold rounded-full shadow-[0_0_20px_rgba(245,158,11,0.4)] hover:shadow-[0_0_30px_rgba(245,158,11,0.65)] hover:scale-[1.05] transition-all flex items-center justify-center cursor-pointer border border-amber-400/40"
+        title="Call Staff for Assistance"
+      >
+        <BellRing size={24} />
+      </motion.button>
     </div>
   );
 };

@@ -3,6 +3,9 @@ const express = require('express');
 const cors = require('cors');
 const http = require('http');
 const { Server } = require('socket.io');
+const db = require('./db');
+
+let activeHelpRequests = [];
 
 const errorHandler = require('./middleware/errorHandler');
 const { authenticate, authorize } = require('./middleware/authMiddleware');
@@ -42,12 +45,41 @@ io.of('/customer').on('connection', (socket) => {
   socket.on('join:table', ({ tableId }) => {
     socket.join(`table:${tableId}`);
   });
+  socket.on('help:request', ({ tableId }) => {
+    try {
+      const parsedTableId = parseInt(tableId);
+      if (!activeHelpRequests.some(r => r.id === parsedTableId)) {
+        const table = db.prepare('SELECT table_number FROM tables WHERE id = ?').get(parsedTableId);
+        const tableNumber = table ? table.table_number : `Table ${tableId}`;
+        activeHelpRequests.push({
+          id: parsedTableId,
+          tableId: parsedTableId,
+          tableNumber,
+          timestamp: new Date().toISOString()
+        });
+        io.of('/admin').to('admin:global').emit('help:list', activeHelpRequests);
+      }
+    } catch (e) {
+      console.error('Socket help:request error:', e);
+    }
+  });
 });
 io.of('/kitchen').on('connection', (socket) => {
   socket.join('kitchen:global');
 });
 io.of('/admin').on('connection', (socket) => {
   socket.join('admin:global');
+  socket.emit('help:list', activeHelpRequests);
+  
+  socket.on('help:resolve', ({ tableId }) => {
+    try {
+      const parsedTableId = parseInt(tableId);
+      activeHelpRequests = activeHelpRequests.filter(r => r.id !== parsedTableId);
+      io.of('/admin').to('admin:global').emit('help:list', activeHelpRequests);
+    } catch (e) {
+      console.error('Socket help:resolve error:', e);
+    }
+  });
 });
 io.of('/waiter').on('connection', (socket) => {
   socket.join('waiter:global');
