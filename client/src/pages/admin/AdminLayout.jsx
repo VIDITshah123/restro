@@ -4,6 +4,38 @@ import { useAuthStore } from '../../store';
 import { LayoutDashboard, ListOrdered, MenuSquare, Grid, BarChart3, History, LogOut, Receipt, Users } from 'lucide-react';
 import { io } from 'socket.io-client';
 
+const playChime = () => {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const ctx = new AudioContext();
+    
+    const playTone = (freq, time, duration) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      
+      gain.gain.setValueAtTime(0, time);
+      gain.gain.linearRampToValueAtTime(0.15, time + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + duration);
+      
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      
+      osc.start(time);
+      osc.stop(time + duration);
+    };
+
+    const now = ctx.currentTime;
+    playTone(587.33, now, 0.6); // D5
+    playTone(880.00, now + 0.12, 0.8); // A5
+  } catch (e) {
+    console.error('Audio failed to play:', e);
+  }
+};
+
 const AdminLayout = () => {
   const { logout, email } = useAuthStore();
   const navigate = useNavigate();
@@ -43,12 +75,26 @@ const AdminLayout = () => {
         localStorage.setItem('billRequestedTables', JSON.stringify([...reqs]));
         setHasBillRequests(true);
         window.dispatchEvent(new Event('billRequestsUpdated'));
+        playChime();
       } catch (e) { }
     });
+
+    const intervalId = setInterval(() => {
+      try {
+        const stored = localStorage.getItem('billRequestedTables');
+        if (stored) {
+          const reqs = JSON.parse(stored);
+          if (reqs.length > 0) {
+            playChime();
+          }
+        }
+      } catch (e) { }
+    }, 15000);
 
     return () => {
       window.removeEventListener('storage', checkRequests);
       window.removeEventListener('billRequestsUpdated', checkRequests);
+      clearInterval(intervalId);
       socket.disconnect();
     };
   }, []);
