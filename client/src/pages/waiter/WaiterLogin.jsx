@@ -50,7 +50,7 @@ const WaiterLogin = () => {
               <UtensilsCrossed size={26} className="text-black" strokeWidth={2} />
             </div>
             <h1 className="text-2xl font-serif font-black bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-600 bg-clip-text text-transparent tracking-tight">
-              Byte Cafe
+              Yummy Bites
             </h1>
             <p className="text-gray-500 text-xs mt-1 uppercase tracking-widest">Waiter Portal</p>
           </div>

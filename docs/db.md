@@ -1,5 +1,5 @@
 # Database Architecture & Storage Mapping
-**Byte Cafe: AI-Based Smart Restaurant Management System**
+**Yummy Bites: AI-Based Smart Restaurant Management System**
 
 This document provides a highly detailed breakdown of all files and folders related to data storage, schema design, and database connectivity across the entire application ecosystem.
 

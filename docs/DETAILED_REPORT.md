@@ -1,5 +1,5 @@
 # Comprehensive Project Report: AI-Based Smart Restaurant Management System
-**Prepared For:** Byte Cafe External Examination  
+**Prepared For:** Yummy Bites External Examination  
 **Project Scope:** Full-Stack Web Application, Real-Time Systems, Artificial Intelligence, Financial Analytics, Cloud Deployment  
 
 ---
@@ -7,7 +7,7 @@
 ## 1. Introduction and Project Motivation
 The hospitality industry is currently undergoing a massive digital transformation. Traditional restaurants rely heavily on manual processes—physical paper menus, handwritten Kitchen Order Tickets (KOTs), and static Point-of-Sale (POS) systems that only track gross revenue. These antiquated methods introduce severe operational friction: high customer wait times, frequent miscommunication between the floor and the kitchen, and a complete inability to dynamically recommend products to customers based on intelligent data.
 
-The **AI-Based Smart Restaurant Management System** built for **Byte Cafe** was conceived to solve these exact problems. It is a fully decoupled, real-time digital ecosystem that completely eliminates physical menus and paper tickets. By introducing a "Bring Your Own Device" (BYOD) QR-code ordering model, backed by a predictive AI recommendation engine and a live WebSocket-driven kitchen display, the system fundamentally modernizes the dining experience. Furthermore, it empowers restaurant ownership with microscopic financial analytics, calculating exact Net Profit margins by tracking the dynamic Cost of Goods Sold (COGS) at the variant and add-on level.
+The **AI-Based Smart Restaurant Management System** built for **Yummy Bites** was conceived to solve these exact problems. It is a fully decoupled, real-time digital ecosystem that completely eliminates physical menus and paper tickets. By introducing a "Bring Your Own Device" (BYOD) QR-code ordering model, backed by a predictive AI recommendation engine and a live WebSocket-driven kitchen display, the system fundamentally modernizes the dining experience. Furthermore, it empowers restaurant ownership with microscopic financial analytics, calculating exact Net Profit margins by tracking the dynamic Cost of Goods Sold (COGS) at the variant and add-on level.
 
 ---
 
@@ -117,7 +117,7 @@ To prove the system's viability in a production environment, it has been success
 ---
 
 ## 7. Future Scope and Extensibility
-While the Byte Cafe system is a complete, production-ready application, its decoupled architecture allows for massive future expansion:
+While the Yummy Bites system is a complete, production-ready application, its decoupled architecture allows for massive future expansion:
 1. **Integrated Payment Gateways:** Integrating the Stripe or Razorpay APIs into the React frontend would allow customers to settle their digital bills directly via Apple Pay or Credit Card without waiter intervention.
 2. **Predictive Inventory Management:** The Python AI microservice can be expanded with Time Series Forecasting (e.g., ARIMA models) to analyze the velocity of specific dish sales and automatically alert management to order specific raw ingredients before stock runs out.
 3. **Multi-Tenant Franchising:** The database schema can easily be expanded to include a `branch_id` foreign key, allowing corporate ownership to manage dozens of restaurant locations from a single, centralized Super-Admin dashboard.

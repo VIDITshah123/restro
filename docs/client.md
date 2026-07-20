@@ -1,5 +1,5 @@
 # Client Architecture & File Structure
-**Byte Cafe: Frontend Application Mapping**
+**Yummy Bites: Frontend Application Mapping**
 
 This document details the structure of the React.js frontend application (`client/` directory). It is built as a highly optimized Single Page Application (SPA) using Vite and Tailwind CSS.
 

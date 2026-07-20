@@ -1,5 +1,5 @@
 # Server Architecture & File Structure
-**Byte Cafe: Backend & AI Microservice Mapping**
+**Yummy Bites: Backend & AI Microservice Mapping**
 
 This document details the backend infrastructure of the application, encompassing both the Node.js Real-Time API (`server/`) and the independent Python Machine Learning Engine (`ai-service/`).
 

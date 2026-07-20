@@ -89,7 +89,7 @@ const TablesPage = () => {
       // Branding
       ctx.font = 'bold 16px sans-serif';
       ctx.fillStyle = '#F59E0B';
-      ctx.fillText('Byte Cafe', canvas.width / 2, 370);
+      ctx.fillText('Yummy Bites', canvas.width / 2, 370);
 
       // Download
       const link = document.createElement('a');

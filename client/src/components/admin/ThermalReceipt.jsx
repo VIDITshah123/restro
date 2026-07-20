@@ -44,7 +44,7 @@ const ThermalReceipt = ({ tableNumber, orders = [], grandTotal = 0, paymentMetho
     <div id="print-receipt-area" className="font-mono text-black bg-white p-6 max-w-[80mm] mx-auto text-xs leading-normal">
       {/* Header */}
       <div className="text-center mb-4">
-        <h1 className="text-lg font-bold tracking-wider uppercase">BYTE CAFE</h1>
+        <h1 className="text-lg font-bold tracking-wider uppercase">Yummy Bites</h1>
         <p className="text-[10px] text-gray-700">123 Gourmet Boulevard, Tech City</p>
         <p className="text-[10px] text-gray-700">Tel: +91 98765 43210 | GSTIN: 27AAAAA1111A1Z1</p>
         <p className="my-2 border-b border-dashed border-black"></p>
@@ -139,7 +139,7 @@ const ThermalReceipt = ({ tableNumber, orders = [], grandTotal = 0, paymentMetho
         <div className="my-2 flex justify-center">
           {mockQrCode}
         </div>
-        <p className="text-[9px] text-gray-500 uppercase tracking-widest">Powered by Byte Cafe</p>
+        <p className="text-[9px] text-gray-500 uppercase tracking-widest">Powered by Yummy Bites</p>
       </div>
     </div>
   );

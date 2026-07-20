@@ -1,4 +1,4 @@
-# Byte Cafe Project Defense: Examiner Q&A Guide
+# Yummy Bites Project Defense: Examiner Q&A Guide
 **Comprehensive Interview Preparation Document**
 
 This document contains a curated list of potential questions an external examiner might ask during your project defense, complete with the ideal, technically accurate answers you should provide.

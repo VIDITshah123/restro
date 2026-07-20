@@ -1,5 +1,5 @@
 # Project Architecture & File Structure Guide
-**Byte Cafe: AI-Based Smart Restaurant Management System**
+**Yummy Bites: AI-Based Smart Restaurant Management System**
 
 This document serves as a complete map of the codebase. It details the exact purpose of every major folder and file within the `client`, `server`, and `ai-service` environments, demonstrating the massive scale and decoupled nature of the microservices architecture.
 

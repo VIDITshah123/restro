@@ -84,7 +84,7 @@ const WaiterDashboard = () => {
             </div>
             <div>
               <h1 className="text-base font-serif font-black bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-600 bg-clip-text text-transparent tracking-tight leading-tight">
-                Byte Cafe
+                Yummy Bites
               </h1>
               <p className="text-[10px] text-gray-600 uppercase tracking-widest">Waiter Dashboard</p>
             </div>
@@ -193,8 +193,8 @@ const WaiterDashboard = () => {
                 whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
                 onClick={() => navigate(`/menu/${table.id}`)}
                 className={`relative p-5 rounded-2xl border-2 text-center transition-all ${table.is_occupied
-                    ? 'bg-red-500/5 border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.08)]'
-                    : 'bg-[#0f0f0f] border-white/5 hover:border-amber-500/30 hover:shadow-[0_0_15px_rgba(245,158,11,0.08)]'
+                  ? 'bg-red-500/5 border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.08)]'
+                  : 'bg-[#0f0f0f] border-white/5 hover:border-amber-500/30 hover:shadow-[0_0_15px_rgba(245,158,11,0.08)]'
                   }`}
               >
                 {/* Status dot */}
