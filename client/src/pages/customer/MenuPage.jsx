@@ -164,15 +164,16 @@ const MenuPage = () => {
 
   const fetchOrderedItems = async () => {
     try {
-      const res = await api.get(`/orders/table/${tableId}/pending`);
-      const pendingOrders = res.data.data || [];
+      const res = await api.get(`/billing/${tableId}`);
+      const orders = (res.data.data && res.data.data.orders) || [];
       const itemsMap = {};
-      pendingOrders.forEach(o => {
-        if (Array.isArray(o.items)) {
-          o.items.forEach(item => {
+      orders.forEach(o => {
+        const items = o.items || [];
+        items.forEach(item => {
+          if (item.menu_item_id && item.name) {
             itemsMap[item.menu_item_id] = item.name;
-          });
-        }
+          }
+        });
       });
       setOrderedItems(Object.entries(itemsMap).map(([id, name]) => ({ id: parseInt(id), name })));
     } catch (err) {
