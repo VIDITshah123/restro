@@ -187,7 +187,15 @@ const MenuPage = () => {
   }, [showReportModal, tableId]);
 
   const handleReportSubmit = async () => {
-    if (reportDescription.trim().length < 10) {
+    const isOtherType = reportStep === 'other';
+    const isDescriptionRequired = reportStep === 'food' || (isOtherType && selectedChip === 'Other');
+
+    if (isOtherType && !selectedChip) {
+      alert("Please select a concern type.");
+      return;
+    }
+
+    if (isDescriptionRequired && reportDescription.trim().length < 10) {
       alert("Please describe the issue with at least 10 characters.");
       return;
     }
@@ -197,15 +205,13 @@ const MenuPage = () => {
       const payload = {
         tableId: parseInt(tableId),
         type: reportStep,
-        description: reportDescription,
+        description: isOtherType 
+          ? (selectedChip === 'Other' ? reportDescription : selectedChip)
+          : reportDescription,
         items: reportStep === 'food' 
           ? selectedItems.map(name => ({ name, issue: selectedChip }))
           : []
       };
-
-      if (reportStep === 'other' && selectedChip) {
-        payload.description = `[Issue: ${selectedChip}] ${payload.description}`;
-      }
 
       await api.post('/reports', payload);
       alert(
@@ -898,13 +904,17 @@ const MenuPage = () => {
                           'Music too loud', 
                           'Seating issue', 
                           'QR code not working', 
-                          'Payment problem'
+                          'Payment problem',
+                          'Other'
                         ].map(chip => {
                           const isSelected = selectedChip === chip;
                           return (
                             <button
                               key={chip}
-                              onClick={() => setSelectedChip(isSelected ? '' : chip)}
+                              onClick={() => {
+                                setSelectedChip(isSelected ? '' : chip);
+                                if (chip !== 'Other') setReportDescription('');
+                              }}
                               className={`px-3 py-2 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
                                 isSelected 
                                   ? 'bg-red-600 border-red-600 text-white shadow-[0_0_10px_rgba(239,68,68,0.3)]' 
@@ -918,18 +928,20 @@ const MenuPage = () => {
                       </div>
                     </div>
 
-                    <div>
-                      <label className="text-xs text-gray-500 font-bold uppercase tracking-wider block mb-2.5">
-                        Please describe your issue
-                      </label>
-                      <textarea
-                        value={reportDescription}
-                        onChange={(e) => setReportDescription(e.target.value)}
-                        placeholder="Please describe your issue in detail (minimum 10 characters)..."
-                        rows={4}
-                        className="w-full p-4 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-1 focus:ring-red-500/50 focus:border-red-500/50 transition-all font-medium placeholder:text-gray-600 text-gray-200 text-sm outline-none resize-none"
-                      />
-                    </div>
+                    {selectedChip === 'Other' && (
+                      <div>
+                        <label className="text-xs text-gray-500 font-bold uppercase tracking-wider block mb-2.5">
+                          Please describe your problem
+                        </label>
+                        <textarea
+                          value={reportDescription}
+                          onChange={(e) => setReportDescription(e.target.value)}
+                          placeholder="Please describe your problem in detail (minimum 10 characters)..."
+                          rows={4}
+                          className="w-full p-4 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-1 focus:ring-red-500/50 focus:border-red-500/50 transition-all font-medium placeholder:text-gray-600 text-gray-200 text-sm outline-none resize-none"
+                        />
+                      </div>
+                    )}
 
                     <div className="flex gap-3 pt-2">
                       <button
@@ -940,7 +952,7 @@ const MenuPage = () => {
                       </button>
                       <button
                         onClick={handleReportSubmit}
-                        disabled={isSubmittingReport || reportDescription.trim().length < 10}
+                        disabled={isSubmittingReport || !selectedChip || (selectedChip === 'Other' && reportDescription.trim().length < 10)}
                         className="flex-1 bg-red-600 hover:bg-red-500 disabled:bg-gray-800 disabled:text-gray-600 disabled:cursor-not-allowed text-white font-black py-3.5 rounded-xl transition-all uppercase tracking-wider text-xs cursor-pointer shadow-[0_4px_12px_rgba(220,38,38,0.2)]"
                       >
                         {isSubmittingReport ? 'Submitting...' : 'Submit Report'}
