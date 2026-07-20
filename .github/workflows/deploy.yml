@@ -28,6 +28,16 @@ jobs:
             fi
             cd /home/ubuntu/restro
             
+            # ── CRITICAL: Backup live DB BEFORE git reset deletes it ──────────
+            mkdir -p /home/ubuntu/db_backup
+            if [ -f "server/data/restaurant.db" ]; then
+              echo "💾 Backing up live DB before git reset..."
+              cp server/data/restaurant.db /home/ubuntu/db_backup/restaurant.db
+            fi
+            # Stop PM2 to release file locks before reset
+            command -v pm2 >/dev/null 2>&1 && pm2 kill || true
+            rm -f server/data/restaurant.db-wal server/data/restaurant.db-shm
+
             # Fetch latest changes so that deploy.sh is updated before running
             git fetch origin main
             git reset --hard origin/main

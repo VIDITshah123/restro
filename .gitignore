@@ -13,6 +13,11 @@ env/
 pip-log.txt
 pip-delete-this-directory.txt
 
+# SQLite temporary files
+server/data/restaurant.db
+server/data/restaurant.db-shm
+server/data/restaurant.db-wal
+
 # Environment Variables
 .env
 .env.local

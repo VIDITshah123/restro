@@ -12,7 +12,20 @@ echo "📦 Fetching latest changes from main..."
 git fetch origin main
 git reset --hard origin/main
 
-# 1. Update Backend Dependencies and Database Schema
+# 1. Restore the live database from backup
+DB_LIVE="server/data/restaurant.db"
+DB_BACKUP="/home/ubuntu/db_backup/restaurant.db"
+
+mkdir -p server/data
+if [ -f "$DB_BACKUP" ]; then
+  echo "✅ Restoring live database from backup ($DB_BACKUP)..."
+  cp "$DB_BACKUP" "$DB_LIVE"
+  echo "   Database restored."
+else
+  echo "⚠️  No backup found at $DB_BACKUP — starting with a fresh database."
+fi
+
+# 2. Update Backend Dependencies and Database Schema
 echo "⚙️ Setting up backend environment..."
 cd server
 npm install --omit=dev
