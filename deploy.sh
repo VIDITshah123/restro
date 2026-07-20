@@ -33,7 +33,6 @@ npm install --omit=dev
 echo "🗄️ Running migrations..."
 cd ..
 node migrate.js
-node server/db/seed.js
 
 # 2. Setup Python AI Service Virtual Environment
 echo "🐍 Setting up Python AI service..."

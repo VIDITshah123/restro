@@ -31,8 +31,11 @@ jobs:
             # ── CRITICAL: Backup live DB BEFORE git reset deletes it ──────────
             mkdir -p /home/ubuntu/db_backup
             if [ -f "server/data/restaurant.db" ]; then
-              echo "💾 Backing up live DB before git reset..."
+              echo "💾 Checkpointing WAL and backing up live DB before git reset..."
+              # Merge WAL into the main DB file so backup captures all committed data
+              sqlite3 server/data/restaurant.db "PRAGMA wal_checkpoint(TRUNCATE);" || true
               cp server/data/restaurant.db /home/ubuntu/db_backup/restaurant.db
+              echo "   Backup complete: $(sqlite3 /home/ubuntu/db_backup/restaurant.db 'SELECT COUNT(*) FROM menu_items;') menu items saved."
             fi
             # Stop PM2 to release file locks before reset
             command -v pm2 >/dev/null 2>&1 && pm2 kill || true
