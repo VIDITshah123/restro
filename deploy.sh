@@ -20,15 +20,26 @@ npm install --omit=dev
 echo "🗄️ Running migrations..."
 cd ..
 node migrate.js
+node server/db/seed.js
 
-# 2. Update Frontend Dependencies and Build Assets
+# 2. Setup Python AI Service Virtual Environment
+echo "🐍 Setting up Python AI service..."
+cd ai-service
+if [ ! -d "venv" ]; then
+  python3 -m venv venv || virtualenv venv
+fi
+source venv/bin/activate
+pip install -r requirements.txt
+cd ..
+
+# 3. Update Frontend Dependencies and Build Assets
 echo "💻 Setting up frontend environment..."
 cd client
 npm install
 npm run build
 cd ..
 
-# 3. Restart the Backend Application via PM2
+# 4. Restart the Backend Application and AI Service via PM2
 echo "🔄 Reloading application server process..."
 pm2 restart ecosystem.config.js || pm2 start ecosystem.config.js
 pm2 save

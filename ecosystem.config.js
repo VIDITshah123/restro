@@ -8,6 +8,15 @@ module.exports = {
         NODE_ENV: 'production',
         PORT: 3000
       }
+    },
+    {
+      name: 'restro-ai',
+      script: 'app.py',
+      cwd: './ai-service',
+      interpreter: '/home/ubuntu/restro/ai-service/venv/bin/python3',
+      env: {
+        PORT: 5000
+      }
     }
   ]
 };
