@@ -11,30 +11,23 @@ cd /home/ubuntu/restro
 echo "📦 Fetching latest changes from main..."
 git fetch origin main
 git reset --hard origin/main
+# NOTE: restaurant.db is in .gitignore so git reset --hard NEVER deletes it.
+# The live database at server/data/restaurant.db is preserved automatically.
 
-# 1. Restore the live database from backup
-DB_LIVE="server/data/restaurant.db"
-DB_BACKUP="/home/ubuntu/db_backup/restaurant.db"
-
+# 1. Ensure the data directory exists (first-time only)
 mkdir -p server/data
-if [ -f "$DB_BACKUP" ]; then
-  echo "✅ Restoring live database from backup ($DB_BACKUP)..."
-  cp "$DB_BACKUP" "$DB_LIVE"
-  echo "   Database restored."
-else
-  echo "⚠️  No backup found at $DB_BACKUP — starting with a fresh database."
-fi
 
-# 2. Update Backend Dependencies and Database Schema
+# 2. Update Backend Dependencies
 echo "⚙️ Setting up backend environment..."
 cd server
 npm install --omit=dev
-
-echo "🗄️ Running migrations..."
 cd ..
+
+# 3. Run database migrations (safe: only adds new columns/tables, never wipes data)
+echo "🗄️ Running migrations..."
 node migrate.js
 
-# 2. Setup Python AI Service Virtual Environment
+# 4. Setup Python AI Service Virtual Environment
 echo "🐍 Setting up Python AI service..."
 cd ai-service
 if [ ! -d "venv" ]; then
@@ -44,14 +37,14 @@ source venv/bin/activate
 pip install -r requirements.txt
 cd ..
 
-# 3. Update Frontend Dependencies and Build Assets
+# 5. Update Frontend Dependencies and Build Assets
 echo "💻 Setting up frontend environment..."
 cd client
 npm install
 npm run build
 cd ..
 
-# 4. Restart the Backend Application and AI Service via PM2
+# 6. Restart the Backend Application and AI Service via PM2
 echo "🔄 Reloading application server process..."
 pm2 restart ecosystem.config.js || pm2 start ecosystem.config.js
 pm2 save

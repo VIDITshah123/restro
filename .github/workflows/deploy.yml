@@ -27,24 +27,9 @@ jobs:
               git clone https://github.com/VIDITshah123/restro.git /home/ubuntu/restro
             fi
             cd /home/ubuntu/restro
-            
-            # ── CRITICAL: Backup live DB BEFORE git reset deletes it ──────────
-            mkdir -p /home/ubuntu/db_backup
-            if [ -f "server/data/restaurant.db" ]; then
-              echo "💾 Checkpointing WAL and backing up live DB before git reset..."
-              # Merge WAL into the main DB file so backup captures all committed data
-              sqlite3 server/data/restaurant.db "PRAGMA wal_checkpoint(TRUNCATE);" || true
-              cp server/data/restaurant.db /home/ubuntu/db_backup/restaurant.db
-              echo "   Backup complete: $(sqlite3 /home/ubuntu/db_backup/restaurant.db 'SELECT COUNT(*) FROM menu_items;') menu items saved."
-            fi
-            # Stop PM2 to release file locks before reset
-            command -v pm2 >/dev/null 2>&1 && pm2 kill || true
-            rm -f server/data/restaurant.db-wal server/data/restaurant.db-shm
 
-            # Fetch latest changes so that deploy.sh is updated before running
-            git fetch origin main
-            git reset --hard origin/main
-            
             # Make deploy.sh executable and run it
+            # NOTE: restaurant.db is in .gitignore — git reset --hard inside deploy.sh
+            # will NEVER delete or overwrite the live database file.
             chmod +x deploy.sh
             ./deploy.sh
