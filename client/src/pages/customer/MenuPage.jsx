@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSessionStore, useCartStore } from '../../store';
 import api from '../../api';
-import { ShoppingCart, Receipt, X, CheckCircle, Plus, Minus, CreditCard, FileText, BellRing } from 'lucide-react';
+import { ShoppingCart, Receipt, X, CheckCircle, Plus, Minus, CreditCard, FileText, BellRing, Flag } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { io } from 'socket.io-client';
 
@@ -154,6 +154,77 @@ const MenuPage = () => {
     }
   };
 
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportStep, setReportStep] = useState('type'); // 'type' | 'food' | 'other'
+  const [orderedItems, setOrderedItems] = useState([]);
+  const [selectedItems, setSelectedItems] = useState([]);
+  const [selectedChip, setSelectedChip] = useState('');
+  const [reportDescription, setReportDescription] = useState('');
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
+
+  const fetchOrderedItems = async () => {
+    try {
+      const res = await api.get(`/orders/table/${tableId}/pending`);
+      const pendingOrders = res.data.data || [];
+      const itemsMap = {};
+      pendingOrders.forEach(o => {
+        if (Array.isArray(o.items)) {
+          o.items.forEach(item => {
+            itemsMap[item.menu_item_id] = item.name;
+          });
+        }
+      });
+      setOrderedItems(Object.entries(itemsMap).map(([id, name]) => ({ id: parseInt(id), name })));
+    } catch (err) {
+      console.error('Error fetching ordered items:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (showReportModal && tableId) {
+      fetchOrderedItems();
+    }
+  }, [showReportModal, tableId]);
+
+  const handleReportSubmit = async () => {
+    if (reportDescription.trim().length < 10) {
+      alert("Please describe the issue with at least 10 characters.");
+      return;
+    }
+
+    setIsSubmittingReport(true);
+    try {
+      const payload = {
+        tableId: parseInt(tableId),
+        type: reportStep,
+        description: reportDescription,
+        items: reportStep === 'food' 
+          ? selectedItems.map(name => ({ name, issue: selectedChip }))
+          : []
+      };
+
+      if (reportStep === 'other' && selectedChip) {
+        payload.description = `[Issue: ${selectedChip}] ${payload.description}`;
+      }
+
+      await api.post('/reports', payload);
+      alert(
+        reportStep === 'food'
+          ? "Your report has been sent to the restaurant staff. We will resolve it as soon as possible."
+          : "Thank you. Your issue has been reported to the restaurant staff."
+      );
+      setShowReportModal(false);
+      setReportStep('type');
+      setSelectedItems([]);
+      setSelectedChip('');
+      setReportDescription('');
+    } catch (err) {
+      alert(err.response?.data?.error || "Failed to submit report. Please try again.");
+    } finally {
+      setIsSubmittingReport(false);
+    }
+  };
+
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
   const cartTotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
@@ -173,7 +244,7 @@ const MenuPage = () => {
       {/* Header (Glassmorphism) */}
       <header className="sticky top-0 backdrop-blur-xl bg-[#0d0d0d]/80 border-b border-white/5 shadow-md z-50 px-5 py-4 flex justify-between items-center transition-all duration-500">
         <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5 }}>
-          <h1 className="text-3xl font-serif font-black bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-600 bg-clip-text text-transparent tracking-tight">Byte Cafe</h1>
+          <h1 className="text-3xl font-serif font-black bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-600 bg-clip-text text-transparent tracking-tight">Yummy Bites</h1>
           <p className="text-xs font-medium text-amber-500/70 uppercase tracking-widest mt-1 flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse shadow-[0_0_8px_rgba(251,191,36,0.8)]"></span>
             Table {tableNumber || '...'}
@@ -187,18 +258,11 @@ const MenuPage = () => {
             <Receipt size={22} strokeWidth={1.5} />
           </button>
           <button
-            onClick={() => navigate('/cart')}
-            className="relative p-2.5 bg-amber-500/10 rounded-full border border-amber-500/20 hover:bg-amber-500/20 transition-all text-amber-500"
+            onClick={() => setShowReportModal(true)}
+            className="relative p-2.5 bg-red-500/10 rounded-full border border-red-500/20 hover:bg-red-500/20 transition-all text-red-500"
+            title="Report an Issue"
           >
-            <ShoppingCart size={22} strokeWidth={1.5} />
-            {cartItems.length > 0 && (
-              <motion.span
-                initial={{ scale: 0 }} animate={{ scale: 1 }}
-                className="absolute -top-1.5 -right-1.5 bg-amber-500 text-black font-bold text-[10px] w-5 h-5 rounded-full flex items-center justify-center shadow-lg"
-              >
-                {cartItems.length}
-              </motion.span>
-            )}
+            <Flag size={22} strokeWidth={1.5} />
           </button>
         </motion.div>
       </header>
@@ -655,6 +719,237 @@ const MenuPage = () => {
                 <span className="font-serif">→</span>
               </div>
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Report an Issue Modal */}
+      <AnimatePresence>
+        {showReportModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/85 z-[120] flex items-end sm:items-center justify-center backdrop-blur-sm p-4"
+          >
+            <motion.div
+              initial={{ y: 50, scale: 0.95 }}
+              animate={{ y: 0, scale: 1 }}
+              exit={{ y: 50, scale: 0.95 }}
+              className="bg-[#0f0f0f] border border-white/10 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
+            >
+              {/* Modal Header */}
+              <div className="px-6 py-5 border-b border-white/5 flex justify-between items-center bg-black/40">
+                <h3 className="text-lg font-serif font-black tracking-wide flex items-center gap-2">
+                  <Flag className="text-red-500" size={18} />
+                  Report an Issue
+                </h3>
+                <button 
+                  onClick={() => {
+                    setShowReportModal(false);
+                    setReportStep('type');
+                    setSelectedItems([]);
+                    setSelectedChip('');
+                    setReportDescription('');
+                  }}
+                  className="p-1.5 hover:bg-white/5 rounded-full text-gray-500 hover:text-white transition-colors cursor-pointer"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-6 overflow-y-auto space-y-6 flex-1">
+                {reportStep === 'type' && (
+                  <div className="space-y-4">
+                    <p className="text-sm text-gray-400 font-medium">What would you like to report?</p>
+                    <button
+                      onClick={() => setReportStep('food')}
+                      className="w-full text-left p-4 bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/10 rounded-xl transition-all flex items-center justify-between group cursor-pointer"
+                    >
+                      <span className="font-bold text-gray-200 flex items-center gap-3">
+                        <span className="text-xl">🍽️</span> Regarding Food
+                      </span>
+                      <span className="text-gray-500 group-hover:text-amber-500 transition-colors font-serif">→</span>
+                    </button>
+                    <button
+                      onClick={() => setReportStep('other')}
+                      className="w-full text-left p-4 bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/10 rounded-xl transition-all flex items-center justify-between group cursor-pointer"
+                    >
+                      <span className="font-bold text-gray-200 flex items-center gap-3">
+                        <span className="text-xl">⚠️</span> Other Issue
+                      </span>
+                      <span className="text-gray-500 group-hover:text-amber-500 transition-colors font-serif">→</span>
+                    </button>
+                  </div>
+                )}
+
+                {reportStep === 'food' && (
+                  <div className="space-y-5">
+                    <div>
+                      <label className="text-xs text-gray-500 font-bold uppercase tracking-wider block mb-2.5">
+                        Select Food Items
+                      </label>
+                      {orderedItems.length === 0 ? (
+                        <p className="text-sm text-gray-600 italic">No food items ordered yet in this session.</p>
+                      ) : (
+                        <div className="grid grid-cols-1 gap-2 max-h-36 overflow-y-auto pr-1">
+                          {orderedItems.map(item => {
+                            const isChecked = selectedItems.includes(item.name);
+                            return (
+                              <button
+                                key={item.id}
+                                onClick={() => {
+                                  setSelectedItems(prev => 
+                                    isChecked 
+                                      ? prev.filter(name => name !== item.name)
+                                      : [...prev, item.name]
+                                  );
+                                }}
+                                className={`w-full text-left px-4 py-3 rounded-xl border text-sm font-semibold flex items-center gap-3 transition-all cursor-pointer ${
+                                  isChecked 
+                                    ? 'bg-red-500/10 border-red-500/30 text-red-400' 
+                                    : 'bg-white/5 border-white/5 text-gray-400 hover:bg-white/10 hover:border-white/10'
+                                }`}
+                              >
+                                <span className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${
+                                  isChecked ? 'border-red-500 bg-red-500 text-black' : 'border-gray-600'
+                                }`}>
+                                  {isChecked && <CheckCircle size={12} strokeWidth={3} />}
+                                </span>
+                                {item.name}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
+                    {selectedItems.length > 0 && (
+                      <div>
+                        <label className="text-xs text-gray-500 font-bold uppercase tracking-wider block mb-2.5">
+                          Predefined Issue Chips
+                        </label>
+                        <div className="flex flex-wrap gap-2">
+                          {['Food is Cold', 'Poor Quality', 'Too Salty', 'Too Spicy', 'Undercooked', 'Overcooked'].map(chip => {
+                            const isSelected = selectedChip === chip;
+                            return (
+                              <button
+                                key={chip}
+                                onClick={() => setSelectedChip(isSelected ? '' : chip)}
+                                className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all border cursor-pointer ${
+                                  isSelected 
+                                    ? 'bg-red-600 border-red-600 text-white shadow-[0_0_10px_rgba(239,68,68,0.3)]' 
+                                    : 'bg-white/5 border-white/5 text-gray-400 hover:bg-white/10'
+                                }`}
+                              >
+                                {chip}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="text-xs text-gray-500 font-bold uppercase tracking-wider block mb-2.5">
+                        Please describe the issue
+                      </label>
+                      <textarea
+                        value={reportDescription}
+                        onChange={(e) => setReportDescription(e.target.value)}
+                        placeholder="Describe the issue in detail (minimum 10 characters)..."
+                        rows={3}
+                        className="w-full p-4 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-1 focus:ring-red-500/50 focus:border-red-500/50 transition-all font-medium placeholder:text-gray-600 text-gray-200 text-sm outline-none resize-none"
+                      />
+                    </div>
+
+                    <div className="flex gap-3 pt-2">
+                      <button
+                        onClick={() => setReportStep('type')}
+                        className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-400 font-bold py-3.5 rounded-xl transition-colors uppercase tracking-wider text-xs cursor-pointer"
+                      >
+                        Back
+                      </button>
+                      <button
+                        onClick={handleReportSubmit}
+                        disabled={isSubmittingReport || selectedItems.length === 0 || reportDescription.trim().length < 10}
+                        className="flex-1 bg-red-600 hover:bg-red-500 disabled:bg-gray-800 disabled:text-gray-600 disabled:cursor-not-allowed text-white font-black py-3.5 rounded-xl transition-all uppercase tracking-wider text-xs cursor-pointer shadow-[0_4px_12px_rgba(220,38,38,0.2)]"
+                      >
+                        {isSubmittingReport ? 'Submitting...' : 'Submit Report'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {reportStep === 'other' && (
+                  <div className="space-y-5">
+                    <div>
+                      <label className="text-xs text-gray-500 font-bold uppercase tracking-wider block mb-2.5">
+                        Select Concern Type
+                      </label>
+                      <div className="flex flex-wrap gap-2 max-h-36 overflow-y-auto pr-1">
+                        {[
+                          'Table is dirty', 
+                          'Need water', 
+                          'Billing issue', 
+                          'Staff behavior', 
+                          'Restaurant cleanliness', 
+                          'Music too loud', 
+                          'Seating issue', 
+                          'QR code not working', 
+                          'Payment problem'
+                        ].map(chip => {
+                          const isSelected = selectedChip === chip;
+                          return (
+                            <button
+                              key={chip}
+                              onClick={() => setSelectedChip(isSelected ? '' : chip)}
+                              className={`px-3 py-2 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                                isSelected 
+                                  ? 'bg-red-600 border-red-600 text-white shadow-[0_0_10px_rgba(239,68,68,0.3)]' 
+                                  : 'bg-white/5 border-white/5 text-gray-400 hover:bg-white/10'
+                              }`}
+                            >
+                              {chip}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-xs text-gray-500 font-bold uppercase tracking-wider block mb-2.5">
+                        Please describe your issue
+                      </label>
+                      <textarea
+                        value={reportDescription}
+                        onChange={(e) => setReportDescription(e.target.value)}
+                        placeholder="Please describe your issue in detail (minimum 10 characters)..."
+                        rows={4}
+                        className="w-full p-4 bg-white/5 border border-white/10 rounded-xl focus:outline-none focus:ring-1 focus:ring-red-500/50 focus:border-red-500/50 transition-all font-medium placeholder:text-gray-600 text-gray-200 text-sm outline-none resize-none"
+                      />
+                    </div>
+
+                    <div className="flex gap-3 pt-2">
+                      <button
+                        onClick={() => setReportStep('type')}
+                        className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 text-gray-400 font-bold py-3.5 rounded-xl transition-colors uppercase tracking-wider text-xs cursor-pointer"
+                      >
+                        Back
+                      </button>
+                      <button
+                        onClick={handleReportSubmit}
+                        disabled={isSubmittingReport || reportDescription.trim().length < 10}
+                        className="flex-1 bg-red-600 hover:bg-red-500 disabled:bg-gray-800 disabled:text-gray-600 disabled:cursor-not-allowed text-white font-black py-3.5 rounded-xl transition-all uppercase tracking-wider text-xs cursor-pointer shadow-[0_4px_12px_rgba(220,38,38,0.2)]"
+                      >
+                        {isSubmittingReport ? 'Submitting...' : 'Submit Report'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

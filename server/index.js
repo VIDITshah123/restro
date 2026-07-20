@@ -18,6 +18,7 @@ const kotController = require('./controllers/kotController');
 const analyticsController = require('./controllers/analyticsController');
 const waiterController = require('./controllers/waiterController');
 const variantController = require('./controllers/variantController');
+const reportController = require('./controllers/reportController');
 
 const app = express();
 const server = http.createServer(app);
@@ -143,6 +144,13 @@ app.delete('/api/waiters/:id', authenticate, authorize('admin'), waiterControlle
 app.get('/api/billing/:tableId', orderController.getBillingForTable);
 app.post('/api/billing/:tableId/generate', authenticate, authorize(['admin', 'manager']), orderController.generateTableBill);
 app.post('/api/billing/:tableId/request', orderController.requestBillByTable);
+
+// Customer Reports
+app.post('/api/reports', reportController.createReport);
+app.get('/api/reports/active', authenticate, authorize(['admin', 'manager']), reportController.getActiveReports);
+app.get('/api/reports/history', authenticate, authorize(['admin', 'manager']), reportController.getReportsHistory);
+app.get('/api/reports/table/:tableId', authenticate, authorize(['admin', 'manager']), reportController.getActiveReportsByTable);
+app.patch('/api/reports/:id/resolve', authenticate, authorize(['admin', 'manager']), reportController.resolveReport);
 
 // --- AI Service Proxy --- //
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));

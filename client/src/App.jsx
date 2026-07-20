@@ -21,6 +21,7 @@ import WaiterLogin from './pages/waiter/WaiterLogin';
 
 import BillingPage from './pages/admin/BillingPage';
 import WaitersPage from './pages/admin/WaitersPage';
+import ReportsPage from './pages/admin/ReportsPage';
 
 const ProtectedRoute = ({ children, roles }) => {
   const { token, role } = useAuthStore();
@@ -53,6 +54,7 @@ function App() {
           <Route path="waiters" element={<WaitersPage />} />
           <Route path="analytics" element={<AnalyticsPage />} />
           <Route path="kot-history" element={<KOTHistory />} />
+          <Route path="reports" element={<ReportsPage />} />
         </Route>
 
         {/* Kitchen Portal */}

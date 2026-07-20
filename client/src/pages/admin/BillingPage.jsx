@@ -3,7 +3,7 @@ import { io } from 'socket.io-client';
 import api from '../../api';
 import { toISTFull } from '../../lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bell, X, Receipt, Loader2, Printer } from 'lucide-react';
+import { Bell, X, Receipt, Loader2, Printer, Flag } from 'lucide-react';
 import AppDialog, { useDialog } from '../../components/AppDialog';
 import ThermalReceipt from '../../components/admin/ThermalReceipt';
 
@@ -13,6 +13,7 @@ const BillingPage = () => {
   const [billing, setBilling] = useState(null);
   const [loading, setLoading] = useState(false);
   const [notifications, setNotifications] = useState([]);
+  const [activeReports, setActiveReports] = useState([]);
   const [sortOption, setSortOption] = useState('Table (Asc)');
   const [paymentMethod, setPaymentMethod] = useState('Cash');
   const { showAlert, showConfirm, dialogState, closeDialog } = useDialog();
@@ -73,7 +74,12 @@ const BillingPage = () => {
 
   const fetchBilling = async (tableId) => {
     setLoading(true); setSelectedTable(tableId);
-    try { const res = await api.get(`/billing/${tableId}`); setBilling(res.data.data); }
+    try { 
+      const res = await api.get(`/billing/${tableId}`); 
+      setBilling(res.data.data); 
+      const reportsRes = await api.get(`/reports/table/${tableId}`);
+      setActiveReports(reportsRes.data.data || []);
+    }
     catch (err) { console.error(err); }
     finally { setLoading(false); }
   };
@@ -91,7 +97,7 @@ const BillingPage = () => {
       setBillRequestedTables(prev => {
         const next = new Set(prev); next.delete(selectedTable); persistBillRequests(next); return next;
       });
-      setBilling(null); setSelectedTable(null); fetchTables();
+      setBilling(null); setSelectedTable(null); setActiveReports([]); fetchTables();
       await showAlert('Bill generated! Table is now free.', { title: 'Success ✓' });
     } catch (err) {
       await showAlert('Failed to generate bill. Please try again.', { title: 'Error', danger: true });
@@ -182,6 +188,22 @@ const BillingPage = () => {
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
               className="bg-[#0f0f0f] border border-white/5 rounded-2xl p-6"
             >
+              {activeReports.length > 0 && (
+                <div className="mb-6 bg-red-500/10 border border-red-500/30 rounded-xl p-4 flex flex-col gap-2 shadow-[0_0_15px_rgba(239,68,68,0.05)]">
+                  <div className="flex items-center gap-2 text-red-400 font-bold text-sm">
+                    <Flag size={16} className="text-red-500 animate-pulse" />
+                    Active Issues Reported by Customer
+                  </div>
+                  <div className="space-y-2 max-h-32 overflow-y-auto pr-1">
+                    {activeReports.map(rep => (
+                      <div key={rep.id} className="text-xs text-gray-300 border-b border-white/5 pb-2 last:border-b-0 last:pb-0">
+                        <span className="font-semibold text-white">{rep.type === 'food' ? '🍽️ Food' : '⚠️ Other'}:</span> "{rep.description}" 
+                        <span className="text-[10px] text-gray-500 block mt-0.5">{new Date(rep.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div className="flex flex-col gap-4 mb-6">
                 <div className="flex justify-between items-start">
                   <div>

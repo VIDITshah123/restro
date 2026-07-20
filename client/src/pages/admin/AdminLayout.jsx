@@ -1,8 +1,9 @@
 import { useEffect, useState, useRef } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../store';
-import { LayoutDashboard, ListOrdered, MenuSquare, Grid, BarChart3, History, LogOut, Receipt, Users, Bell } from 'lucide-react';
+import { LayoutDashboard, ListOrdered, MenuSquare, Grid, BarChart3, History, LogOut, Receipt, Users, Bell, Flag } from 'lucide-react';
 import { io } from 'socket.io-client';
+import api from '../../api';
 
 const playChime = () => {
   try {
@@ -78,6 +79,7 @@ const AdminLayout = () => {
 
   const [hasBillRequests, setHasBillRequests] = useState(false);
   const [helpRequests, setHelpRequests] = useState([]);
+  const [unreadReportsCount, setUnreadReportsCount] = useState(0);
   const socketRef = useRef(null);
   const helpRequestsRef = useRef([]);
 
@@ -125,6 +127,25 @@ const AdminLayout = () => {
       setHelpRequests(list);
     });
 
+    const fetchActiveReportsCount = async () => {
+      try {
+        const res = await api.get('/reports/active');
+        const active = res.data.data || [];
+        setUnreadReportsCount(active.length);
+      } catch (e) {
+        console.error('Error fetching active reports count:', e);
+      }
+    };
+    fetchActiveReportsCount();
+
+    socket.on('report:new', () => {
+      setUnreadReportsCount(prev => prev + 1);
+    });
+
+    socket.on('report:resolved', () => {
+      setUnreadReportsCount(prev => Math.max(0, prev - 1));
+    });
+
     const intervalId = setInterval(() => {
       try {
         const stored = localStorage.getItem('billRequestedTables');
@@ -161,6 +182,7 @@ const AdminLayout = () => {
     { name: 'Waiters', path: '/admin/waiters', icon: Users },
     { name: 'Analytics', path: '/admin/analytics', icon: BarChart3 },
     { name: 'KOT History', path: '/admin/kot-history', icon: History },
+    { name: 'Reports', path: '/admin/reports', icon: Flag },
   ];
 
   return (
@@ -170,7 +192,7 @@ const AdminLayout = () => {
         {/* Brand */}
         <div className="px-6 py-6 border-b border-white/5">
           <h2 className="text-lg font-serif font-black bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-600 bg-clip-text text-transparent tracking-tight mb-1 flex items-center justify-between">
-            Byte Cafe
+            Yummy Bites
             {helpRequests.length > 0 && (
               <span className="bg-red-600 text-white font-black text-[10px] px-2 py-0.5 rounded-full animate-bounce shadow-[0_0_10px_rgba(239,68,68,0.5)]">
                 {helpRequests.length} HELP
@@ -199,10 +221,15 @@ const AdminLayout = () => {
                   <Icon size={18} strokeWidth={isActive ? 2 : 1.5} className={isActive ? 'text-amber-500' : 'text-gray-600 group-hover:text-gray-400'} />
                   {item.name}
                 </div>
-                {item.name === 'Billing' && hasBillRequests && (
+                 {item.name === 'Billing' && hasBillRequests && (
                   <span className="flex h-2.5 w-2.5 relative">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
+                  </span>
+                )}
+                {item.name === 'Reports' && unreadReportsCount > 0 && (
+                  <span className="bg-red-600 text-white font-black text-[10px] w-5 h-5 rounded-full flex items-center justify-center shadow-[0_0_8px_rgba(220,38,38,0.4)]">
+                    {unreadReportsCount}
                   </span>
                 )}
               </Link>
@@ -228,6 +255,12 @@ const AdminLayout = () => {
         <header className="bg-[#0f0f0f] border-b border-white/5 px-8 py-4 flex justify-between items-center z-40">
           <div className="flex items-center gap-2 text-sm font-semibold text-gray-400">
             Admin Management Portal
+            {unreadReportsCount > 0 && (
+              <span className="bg-red-500/10 border border-red-500/20 text-red-400 text-xs px-2.5 py-1 rounded-full font-bold animate-pulse flex items-center gap-1.5 ml-3">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping"></span>
+                {unreadReportsCount} Issue{unreadReportsCount > 1 ? 's' : ''} Reported
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-4">
             {helpRequests.length > 0 ? (
