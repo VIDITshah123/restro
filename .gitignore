@@ -13,10 +13,8 @@ env/
 pip-log.txt
 pip-delete-this-directory.txt
 
-# SQLite temporary files
-server/data/restaurant.db
-server/data/restaurant.db-shm
-server/data/restaurant.db-wal
+# SQLite temporary files & local database
+server/data/
 
 # Environment Variables
 .env
@@ -29,7 +27,6 @@ server/data/restaurant.db-wal
 client/dist/
 client/build/
 server/dist/
-
 
 # IDE & OS Files
 .vscode/
