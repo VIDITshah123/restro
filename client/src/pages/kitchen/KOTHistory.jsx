@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../../api';
 import { toISTFull } from '../../lib/utils';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Trash2, History } from 'lucide-react';
+import { ArrowLeft, Trash2, History, ShoppingBag, Bike, Globe } from 'lucide-react';
 import AppDialog, { useDialog } from '../../components/AppDialog';
 
 const selectClass = "bg-[#0f0f0f] border border-white/10 text-gray-300 text-sm rounded-xl px-3 py-2.5 outline-none focus:ring-1 focus:ring-amber-500/50 transition-all";
@@ -39,7 +39,7 @@ const KOTHistory = () => {
       await api.delete('/kot/history/clear');
       const res = await api.get('/kot/history');
       setKots(res.data.data);
-    } catch (err) { await showAlert('Error clearing history.', { title: 'Error', danger: true }); }
+    } catch { await showAlert('Error clearing history.', { title: 'Error', danger: true }); }
   };
 
   const sortedKots = [...kots].sort((a, b) => {
@@ -77,92 +77,118 @@ const KOTHistory = () => {
             <option>KOT Number (High to Low)</option>
             <option>KOT Number (Low to High)</option>
           </select>
-          <button onClick={clearHistory} className="flex items-center gap-2 bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 px-4 py-2.5 rounded-xl font-medium text-sm transition-all uppercase tracking-wider">
-            <Trash2 size={14} /> Clear History
-          </button>
-          <a href="/kitchen" className="flex items-center gap-2 bg-white/5 border border-white/10 text-gray-400 hover:text-amber-400 hover:border-amber-500/20 px-4 py-2.5 rounded-xl font-medium text-sm transition-all uppercase tracking-wider">
-            <ArrowLeft size={14} /> Back to KDS
-          </a>
-        </div>
-      </motion.div>
+            <button onClick={clearHistory} className="flex items-center gap-2 bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 px-4 py-2.5 rounded-xl font-medium text-sm transition-all uppercase tracking-wider cursor-pointer">
+              <Trash2 size={14} /> Clear History
+            </button>
+              <a href="/kitchen" className="flex items-center gap-1.5 bg-white/5 border border-white/10 text-gray-400 hover:text-amber-400 hover:border-amber-500/20 px-4 py-2.5 rounded-xl font-medium text-sm transition-all uppercase tracking-wider cursor-pointer">
+                <ArrowLeft size={14} /> Back to KDS
+              </a>
+            </div>
+          </motion.div>
 
-      {/* Table */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-[#0f0f0f] border border-white/5 rounded-2xl overflow-hidden">
-        <table className="w-full text-left">
-          <thead>
-            <tr className="border-b border-white/5">
-              {['KOT Number', 'Table', 'Items', 'Time'].map(h => (
-                <th key={h} className="px-6 py-4 text-xs text-gray-500 uppercase tracking-widest font-bold">{h}</th>
-              ))}
+          {/* Table */}
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-[#0f0f0f] border border-white/5 rounded-2xl overflow-hidden shadow-2xl">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="border-b border-white/5">
+                      {
+                        ['KOT Number', 'Table / Channel', 'Items', 'Time'].map(h => (
+                          <th key={h} className="px-6 py-4 text-xs text-gray-500 uppercase tracking-widest font-bold">{h}</th>
+                        ))
+                      }
             </tr>
-          </thead>
-          <tbody className="divide-y divide-white/5">
-            {sortedKots.length === 0 && (
-              <tr>
-                <td colSpan={4} className="px-6 py-14 text-center">
-                  <History size={36} className="mx-auto mb-3 text-gray-700" strokeWidth={1} />
-                  <p className="text-gray-600 text-sm uppercase tracking-widest">No history available</p>
-                </td>
-              </tr>
-            )}
-            {sortedKots.map((kot, idx) => (
-              <motion.tr
-                key={kot.id}
-                initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.03 }}
-                className="hover:bg-white/[0.02] transition-colors"
-              >
-                <td className="px-6 py-4">
-                  <span className="font-black text-amber-500 font-mono text-sm">{kot.kot_number}</span>
-                </td>
-                <td className="px-6 py-4 text-sm text-gray-300 font-medium">{kot.table_number}</td>
-                <td className="px-6 py-4 text-sm text-gray-500 max-w-sm">
-                  <div className="space-y-2">
-                    {kot.items.map((item, i) => {
-                      const isCombo = item.category === 'Combo Meals' || (item.description || '').includes('- ');
-                      const subItems = isCombo
-                        ? (item.description || '')
-                            .split('\n')
-                            .map(l => l.trim())
-                            .filter(l => l.startsWith('- '))
-                            .map(l => l.slice(2).trim())
-                        : [];
-                      return (
-                        <div key={i} className={isCombo ? 'bg-amber-500/5 border border-amber-500/10 rounded-lg p-2' : ''}>
-                          <div className="flex items-start gap-1.5">
-                            <span className="text-amber-500/70 font-black text-xs mt-0.5">{item.quantity}×</span>
-                            <div className="flex-1">
-                              <span className="text-gray-300 font-medium">
-                                {item.name}
-                                {isCombo && <span className="ml-1.5 text-[9px] bg-amber-500/20 text-amber-400 border border-amber-500/30 px-1.5 py-0.5 rounded-full font-black uppercase tracking-wider">Combo</span>}
-                              </span>
-                              {item.special_notes?.trim() && (
-                                <span className="ml-1.5 text-amber-400/50 italic text-xs">({item.special_notes})</span>
-                              )}
-                              {subItems.length > 0 && (
-                                <div className="mt-1 space-y-0.5 pl-2 border-l border-amber-500/20">
-                                  {subItems.map((sub, j) => (
-                                    <p key={j} className="text-xs text-amber-400/60 leading-tight">
-                                      <span className="text-amber-600 mr-1">›</span>{sub}
-                                    </p>
-                                  ))}
-                                </div>
-                              )}
+                </thead>
+                <tbody className="divide-y divide-white/5">
+                  {sortedKots.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="px-6 py-14 text-center">
+                        <History size={36} className="mx-auto mb-3 text-gray-700" strokeWidth={1} />
+                        <p className="text-gray-600 text-sm uppercase tracking-widest">No history available</p>
+                      </td>
+                    </tr>
+                  )}
+            {sortedKots.map((kot, idx) => {
+              const isTakeaway = kot.order_type === 'takeaway' || kot.table_number === 'Takeaway';
+              const isDelivery = kot.order_type === 'delivery' || kot.table_number === 'Free Home Delivery';
+              const resolvedLabel = isTakeaway ? 'Takeaway' : isDelivery ? 'Free Home Delivery' : (kot.table_number || '—');
+
+              return (
+                <motion.tr
+                  key={kot.id}
+                  initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.03 }}
+                  className="hover:bg-white/[0.02] transition-colors"
+                >
+                  <td className="px-6 py-4">
+                    <span className="font-black text-amber-500 font-mono text-sm">{kot.kot_number}</span>
+                  </td>
+                  <td className="px-6 py-4 text-sm font-medium">
+                    <div className="flex flex-col gap-0.5 items-start">
+                      <span className="text-gray-100 font-bold flex items-center gap-1.5">
+                        {isTakeaway && <ShoppingBag size={14} className="text-purple-400" />}
+                        {isDelivery && <Bike size={14} className="text-orange-400" />}
+                        {resolvedLabel}
+                      </span>
+                      {kot.online_platform && (
+                        <span className="text-[10px] text-blue-400 flex items-center gap-1">
+                          <Globe size={10} /> {kot.online_platform}
+                        </span>
+                      )}
+                      {kot.customer_name && (
+                        <span className="text-[11px] text-gray-500">
+                          {kot.customer_name}
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-500 max-w-sm">
+                    <div className="space-y-2">
+                      {kot.items.map((item, i) => {
+                        const isCombo = item.category === 'Combo Meals' || (item.description || '').includes('- ');
+                        const subItems = isCombo
+                          ? (item.description || '')
+                              .split('\n')
+                              .map(l => l.trim())
+                              .filter(l => l.startsWith('- '))
+                              .map(l => l.slice(2).trim())
+                          : [];
+                        return (
+                          <div key={i} className={isCombo ? 'bg-amber-500/5 border border-amber-500/10 rounded-lg p-2' : ''}>
+                            <div className="flex items-start gap-1.5">
+                              <span className="text-amber-500/70 font-black text-xs mt-0.5 font-mono">{item.quantity}×</span>
+                              <div className="flex-1">
+                                <span className="text-gray-300 font-medium">
+                                  {item.name}
+                                  {isCombo && <span className="ml-1.5 text-[9px] bg-amber-500/20 text-amber-400 border border-amber-500/30 px-1.5 py-0.5 rounded-full font-black uppercase tracking-wider">Combo</span>}
+                                </span>
+                                {item.special_notes?.trim() && (
+                                  <span className="ml-1.5 text-amber-400/50 italic text-xs">({item.special_notes})</span>
+                                )}
+                                {subItems.length > 0 && (
+                                  <div className="mt-1 space-y-0.5 pl-2 border-l border-amber-500/20">
+                                    {subItems.map((sub, j) => (
+                                      <p key={j} className="text-xs text-amber-400/60 leading-tight">
+                                        <span className="text-amber-600 mr-1">›</span>{sub}
+                                      </p>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </td>
-                <td className="px-6 py-4 text-xs text-gray-500 whitespace-nowrap">{toISTFull(kot.generated_at)}</td>
-              </motion.tr>
-            ))}
-          </tbody>
-        </table>
+                        );
+                      })}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-xs text-gray-500 whitespace-nowrap">{toISTFull(kot.generated_at)}</td>
+                </motion.tr>
+                        );
+            })}
+                      </tbody>
+                    </table>
       </motion.div>
-      <AppDialog dialogState={dialogState} closeDialog={closeDialog} />
-    </div>
-  );
+                <AppDialog dialogState={dialogState} closeDialog={closeDialog} />
+              </div>
+              );
 };
 
-export default KOTHistory;
+              export default KOTHistory;

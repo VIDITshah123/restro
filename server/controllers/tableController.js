@@ -2,7 +2,11 @@ const db = require('../db');
 const qrcode = require('qrcode');
 
 const getTables = (req, res) => {
-  const tables = db.prepare('SELECT * FROM tables').all();
+  const includeSystem = req.query.includeSystem === 'true';
+  const query = includeSystem
+    ? 'SELECT * FROM tables ORDER BY id ASC'
+    : "SELECT * FROM tables WHERE id NOT IN (9991, 9992) AND table_number NOT IN ('Takeaway', 'Free Home Delivery') ORDER BY id ASC";
+  const tables = db.prepare(query).all();
   res.json({ success: true, data: tables });
 };
 
@@ -27,9 +31,9 @@ const createTable = async (req, res) => {
     const protocol = req.protocol || 'http';
     const menuUrl = `${protocol}://${host}/menu/${tableId}`;
     const qr_code_url = await qrcode.toDataURL(menuUrl);
-    
+
     db.prepare('UPDATE tables SET qr_code_url = ? WHERE id = ?').run(qr_code_url, tableId);
-    
+
     res.json({ success: true, data: { id: tableId, qr_code_url } });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -40,14 +44,19 @@ const deleteTable = (req, res) => {
   const { id } = req.params;
 
   try {
+    const parsedId = parseInt(id);
+    if (parsedId === 9991 || parsedId === 9992) {
+      return res.status(400).json({ success: false, message: 'Cannot delete system order channels (Takeaway / Delivery).' });
+    }
+
     // Check if table is occupied
-    const table = db.prepare('SELECT is_occupied FROM tables WHERE id = ?').get(id);
+    const table = db.prepare('SELECT is_occupied FROM tables WHERE id = ?').get(parsedId);
     if (table && table.is_occupied === 1) {
       return res.status(409).json({ success: false, message: 'Cannot delete an occupied table.' });
     }
 
     // Check if any active (un-hidden) orders reference this table
-    const activeOrders = db.prepare('SELECT COUNT(*) as count FROM orders WHERE table_id = ? AND is_hidden = 0').get(id);
+    const activeOrders = db.prepare('SELECT COUNT(*) as count FROM orders WHERE table_id = ? AND is_hidden = 0').get(parsedId);
     if (activeOrders.count > 0) {
       return res.status(409).json({
         success: false,
@@ -57,10 +66,10 @@ const deleteTable = (req, res) => {
 
     // Safe to delete. We must cascade delete the hidden orders and KOTs to respect SQLite foreign keys.
     db.transaction(() => {
-      db.prepare('DELETE FROM kot WHERE table_id = ?').run(id);
-      db.prepare('DELETE FROM order_items WHERE order_id IN (SELECT id FROM orders WHERE table_id = ?)').run(id);
-      db.prepare('DELETE FROM orders WHERE table_id = ?').run(id);
-      db.prepare('DELETE FROM tables WHERE id = ?').run(id);
+      db.prepare('DELETE FROM kot WHERE table_id = ?').run(parsedId);
+      db.prepare('DELETE FROM order_items WHERE order_id IN (SELECT id FROM orders WHERE table_id = ?)').run(parsedId);
+      db.prepare('DELETE FROM orders WHERE table_id = ?').run(parsedId);
+      db.prepare('DELETE FROM tables WHERE id = ?').run(parsedId);
     })();
 
     res.json({ success: true });
@@ -68,7 +77,6 @@ const deleteTable = (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
-
 
 module.exports = {
   getTables,

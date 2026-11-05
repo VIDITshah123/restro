@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import api from '../../api';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Download, Trash2, ShoppingBag, Plus, Grid3x3 } from 'lucide-react';
 import AppDialog, { useDialog } from '../../components/AppDialog';
+import PlaceOrderModal from '../../components/admin/PlaceOrderModal';
 
 const TablesPage = () => {
   const [tables, setTables] = useState([]);
-  const [tableInput, setTableInput] = useState('');
+  const [isPlaceOrderOpen, setIsPlaceOrderOpen] = useState(false);
   const { showAlert, showConfirm, dialogState, closeDialog } = useDialog();
 
   const fetchTables = async () => {
@@ -21,12 +22,12 @@ const TablesPage = () => {
   useEffect(() => { fetchTables(); }, []);
 
   const createTable = async () => {
-    const tableNumber = tableInput.trim() || window.prompt('Enter Table Number (e.g. Table 11):');
+    const tableNumber = window.prompt('Enter Table Number (e.g. Table 11):');
     if (!tableNumber) return;
     try {
       await api.post('/tables', { table_number: tableNumber });
       fetchTables();
-    } catch (err) {
+    } catch {
       await showAlert('Error creating table. Please try again.', { title: 'Error', danger: true });
     }
   };
@@ -96,7 +97,7 @@ const TablesPage = () => {
       link.download = `${table.table_number.replace(/\s+/g, '-').toLowerCase()}-qr.png`;
       link.href = canvas.toDataURL('image/png');
       link.click();
-    } catch (err) {
+    } catch {
       await showAlert('Failed to download QR code.', { title: 'Error', danger: true });
     }
   };
@@ -120,13 +121,22 @@ const TablesPage = () => {
             <span className="text-gray-500">{tables.length} total</span>
           </p>
         </div>
-        <motion.button
-          whileTap={{ scale: 0.97 }}
-          onClick={createTable}
-          className="flex items-center gap-2 bg-gradient-to-r from-amber-600 to-amber-500 text-black font-bold px-5 py-2.5 rounded-xl shadow-[0_0_15px_rgba(245,158,11,0.2)] hover:shadow-[0_0_25px_rgba(245,158,11,0.35)] transition-all text-sm uppercase tracking-wider"
-        >
-          <Plus size={16} strokeWidth={2.5} /> Add Table
-        </motion.button>
+        <div className="flex items-center gap-3">
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={() => setIsPlaceOrderOpen(true)}
+            className="flex items-center gap-2 bg-[#0f0f0f] border border-amber-500/40 hover:bg-amber-500/10 text-amber-400 font-bold px-4 py-2.5 rounded-xl transition-all text-sm uppercase tracking-wider cursor-pointer shadow-[0_0_15px_rgba(245,158,11,0.1)]"
+          >
+            <ShoppingBag size={16} strokeWidth={2} /> Place Takeaway / Delivery
+          </motion.button>
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            onClick={createTable}
+            className="flex items-center gap-2 bg-gradient-to-r from-amber-600 to-amber-500 text-black font-bold px-5 py-2.5 rounded-xl shadow-[0_0_15px_rgba(245,158,11,0.2)] hover:shadow-[0_0_25px_rgba(245,158,11,0.35)] transition-all text-sm uppercase tracking-wider cursor-pointer"
+          >
+            <Plus size={16} strokeWidth={2.5} /> Add Table
+          </motion.button>
+        </div>
       </motion.div>
 
       {/* Grid */}
@@ -183,6 +193,11 @@ const TablesPage = () => {
         ))}
       </div>
       <AppDialog dialogState={dialogState} closeDialog={closeDialog} />
+      <PlaceOrderModal
+        isOpen={isPlaceOrderOpen}
+        onClose={() => setIsPlaceOrderOpen(false)}
+        onOrderPlaced={() => fetchTables()}
+      />
     </div>
   );
 };

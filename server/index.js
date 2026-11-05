@@ -116,10 +116,12 @@ app.delete('/api/tables/:id', authenticate, authorize('admin'), tableController.
 
 // Orders
 app.post('/api/orders', orderController.createOrder);
+app.get('/api/orders/sessions', authenticate, authorize(['admin', 'manager']), orderController.getSessions);
 app.get('/api/orders', authenticate, authorize(['admin', 'manager']), orderController.getOrders);
 app.get('/api/orders/:id', orderController.getOrderById);
 app.patch('/api/orders/:id/status', authenticate, authorize(['admin', 'manager']), orderController.updateOrderStatus);
 app.post('/api/orders/:id/bill', authenticate, authorize(['admin', 'manager']), orderController.generateBill);
+app.post('/api/orders/:id/bill-single', authenticate, authorize(['admin', 'manager']), orderController.billSingleOrder);
 app.post('/api/orders/:id/request-bill', orderController.requestBill);
 app.delete('/api/orders/history/clear', authenticate, authorize('admin'), orderController.clearOrderHistory);
 
@@ -141,6 +143,7 @@ app.put('/api/waiters/:id', authenticate, authorize('admin'), waiterController.u
 app.delete('/api/waiters/:id', authenticate, authorize('admin'), waiterController.deleteWaiter);
 
 // Billing — get all unbilled orders for a table
+app.get('/api/billing/pending', authenticate, authorize(['admin', 'manager']), orderController.getPendingBills);
 app.get('/api/billing/:tableId', orderController.getBillingForTable);
 app.post('/api/billing/:tableId/generate', authenticate, authorize(['admin', 'manager']), orderController.generateTableBill);
 app.post('/api/billing/:tableId/request', orderController.requestBillByTable);
