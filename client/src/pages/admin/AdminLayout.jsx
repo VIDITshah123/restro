@@ -164,9 +164,27 @@ const AdminLayout = () => {
       }
     }, 5000);
 
+    const handlePageHide = () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+      }
+    };
+
+    const handlePageShow = (e) => {
+      if (e.persisted && socketRef.current) {
+        socketRef.current.connect();
+        fetchActiveReportsCount();
+      }
+    };
+
+    window.addEventListener('pagehide', handlePageHide);
+    window.addEventListener('pageshow', handlePageShow);
+
     return () => {
       window.removeEventListener('storage', checkRequests);
       window.removeEventListener('billRequestsUpdated', checkRequests);
+      window.removeEventListener('pagehide', handlePageHide);
+      window.removeEventListener('pageshow', handlePageShow);
       clearInterval(intervalId);
       clearInterval(helpIntervalId);
       socket.disconnect();

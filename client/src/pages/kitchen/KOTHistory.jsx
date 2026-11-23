@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../../api';
 import { toISTFull } from '../../lib/utils';
 import { motion } from 'framer-motion';
@@ -80,9 +81,9 @@ const KOTHistory = () => {
             <button onClick={clearHistory} className="flex items-center gap-2 bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 px-4 py-2.5 rounded-xl font-medium text-sm transition-all uppercase tracking-wider cursor-pointer">
               <Trash2 size={14} /> Clear History
             </button>
-              <a href="/kitchen" className="flex items-center gap-1.5 bg-white/5 border border-white/10 text-gray-400 hover:text-amber-400 hover:border-amber-500/20 px-4 py-2.5 rounded-xl font-medium text-sm transition-all uppercase tracking-wider cursor-pointer">
-                <ArrowLeft size={14} /> Back to KDS
-              </a>
+            <Link to="/kitchen" className="flex items-center gap-1.5 bg-white/5 border border-white/10 text-gray-400 hover:text-amber-400 hover:border-amber-500/20 px-4 py-2.5 rounded-xl font-medium text-sm transition-all uppercase tracking-wider cursor-pointer">
+              <ArrowLeft size={14} /> Back to KDS
+            </Link>
             </div>
           </motion.div>
 

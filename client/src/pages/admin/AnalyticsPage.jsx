@@ -138,8 +138,8 @@ const AnalyticsPage = () => {
       {/* Charts row 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
         <SectionCard title="Top 5 Dishes by Volume" delay={0.4}>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="h-64 w-full min-w-0" style={{ minHeight: 256 }}>
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={250}>
               <BarChart data={data.topDishes}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.04)" />
                 <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#4b5563' }} axisLine={false} tickLine={false} interval={0} tickFormatter={(v) => v.length > 15 ? v.substring(0, 15) + '...' : v} />
@@ -152,8 +152,8 @@ const AnalyticsPage = () => {
         </SectionCard>
 
         <SectionCard title="Category Revenue (₹)" delay={0.45}>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="h-64 w-full min-w-0" style={{ minHeight: 256 }}>
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={250}>
               <PieChart>
                 <Pie
                   data={data.categoryPerformance}
@@ -200,8 +200,8 @@ const AnalyticsPage = () => {
         </SectionCard>
 
         <SectionCard title="Revenue by Payment Method" delay={0.55}>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="h-64 w-full min-w-0" style={{ minHeight: 256 }}>
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={250}>
               <PieChart>
                 <Pie data={data.paymentBreakdown} dataKey="revenue" nameKey="payment_method" cx="50%" cy="50%" outerRadius={90} innerRadius={45} paddingAngle={3} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={{ stroke: 'rgba(255,255,255,0.1)' }}>
                   {data.paymentBreakdown.map((_, index) => (
