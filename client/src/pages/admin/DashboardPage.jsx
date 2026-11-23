@@ -44,36 +44,56 @@ const DashboardPage = () => {
   const [peakHours, setPeakHours] = useState(() => new Array(24).fill(0));
 
   useEffect(() => {
-    const fetchDashboard = async () => {
+    let isMounted = true;
+
+    const fetchStats = async () => {
       try {
         const statsRes = await api.get('/analytics/comprehensive');
         const todayData = statsRes.data?.data?.todaySummary || { totalOrders: 0, revenue: 0 };
-        setStats({
-          totalOrders: todayData.totalOrders || 0,
-          revenue: todayData.revenue || 0,
-          avgOrderValue: (todayData.totalOrders > 0) ? parseFloat(((todayData.revenue || 0) / todayData.totalOrders).toFixed(2)) : 0
-        });
+        if (isMounted) {
+          const totalOrders = todayData.totalOrders || 0;
+          const revenue = todayData.revenue || 0;
+          setStats({
+            totalOrders,
+            revenue,
+            avgOrderValue: totalOrders > 0 ? parseFloat((revenue / totalOrders).toFixed(2)) : 0
+          });
+        }
+      } catch (err) {
+        console.warn('Dashboard stats fetch failed or unauthenticated:', err.message);
+      }
+    };
 
-        try {
-          const peakRes = await api.get('/ai/peak-hours');
+    const fetchPeakHours = async () => {
+      try {
+        const peakRes = await api.get('/ai/peak-hours');
+        if (isMounted) {
           if (Array.isArray(peakRes.data?.hourlyVolume)) {
             setPeakHours(peakRes.data.hourlyVolume);
           } else {
             setPeakHours(new Array(24).fill(0));
           }
-        } catch {
+        }
+      } catch {
+        if (isMounted) {
           setPeakHours(new Array(24).fill(0));
         }
-      } catch (err) {
-        console.error(err);
       }
     };
-    fetchDashboard();
+
+    fetchStats();
+    fetchPeakHours();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  const chartData = (Array.isArray(peakHours) ? peakHours : []).map((vol, hour) => ({
+  const safePeakHours = Array.isArray(peakHours) && peakHours.length > 0 ? peakHours : new Array(24).fill(0);
+
+  const chartData = safePeakHours.map((vol, hour) => ({
     time: `${String(hour).padStart(2, '0')}:00`,
-    Orders: typeof vol === 'number' ? parseFloat(vol.toFixed(1)) : 0
+    Orders: typeof vol === 'number' && !isNaN(vol) ? parseFloat(vol.toFixed(1)) : 0
   }));
 
   return (
@@ -87,9 +107,9 @@ const DashboardPage = () => {
 
       {/* Stat Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
-        <StatCard label="Total Revenue"       value={stats.revenue}       prefix="₹" icon={IndianRupee} delay={0}    glowColor="rgba(251,191,36,0.04)" />
-        <StatCard label="Total Orders"        value={stats.totalOrders}   prefix=""  icon={ShoppingBag}  delay={0.1}  glowColor="rgba(139,92,246,0.04)" />
-        <StatCard label="Avg. Order Value"    value={stats.avgOrderValue} prefix="₹" icon={TrendingUp}   delay={0.2}  glowColor="rgba(34,197,94,0.04)" />
+        <StatCard label="Total Revenue"       value={stats?.revenue ?? 0}       prefix="₹" icon={IndianRupee} delay={0}    glowColor="rgba(251,191,36,0.04)" />
+        <StatCard label="Total Orders"        value={stats?.totalOrders ?? 0}   prefix=""  icon={ShoppingBag}  delay={0.1}  glowColor="rgba(139,92,246,0.04)" />
+        <StatCard label="Avg. Order Value"    value={stats?.avgOrderValue ?? 0} prefix="₹" icon={TrendingUp}   delay={0.2}  glowColor="rgba(34,197,94,0.04)" />
       </div>
 
       {/* Peak Hours Chart */}
@@ -108,7 +128,7 @@ const DashboardPage = () => {
           </span>
         </div>
         <div className="h-72">
-          {peakHours.length > 0 ? (
+          {safePeakHours.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>

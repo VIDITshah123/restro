@@ -6,6 +6,7 @@ const getKot = (req, res) => {
       CASE
         WHEN k.order_type = 'takeaway' OR o.order_type = 'takeaway' THEN 'Takeaway'
         WHEN k.order_type = 'delivery' OR o.order_type = 'delivery' THEN 'Free Home Delivery'
+        WHEN t.is_deleted = 1 THEN COALESCE(t.table_number, 'Table ' || k.table_id) || ' (Deleted)'
         ELSE COALESCE(t.table_number, 'Table ' || k.table_id)
       END as table_number,
       COALESCE(k.order_type, o.order_type, 'dine_in') as order_type,
@@ -62,6 +63,7 @@ const getKotHistory = (req, res) => {
       CASE
         WHEN k.order_type = 'takeaway' OR o.order_type = 'takeaway' THEN 'Takeaway'
         WHEN k.order_type = 'delivery' OR o.order_type = 'delivery' THEN 'Free Home Delivery'
+        WHEN t.is_deleted = 1 THEN COALESCE(t.table_number, 'Table ' || k.table_id) || ' (Deleted)'
         ELSE COALESCE(t.table_number, 'Table ' || k.table_id)
       END as table_number,
       COALESCE(k.order_type, o.order_type, 'dine_in') as order_type,
@@ -126,15 +128,17 @@ const updateKotStatus = (req, res) => {
   db.prepare("UPDATE kot SET status = ?, updated_at = datetime('now') WHERE id = ?").run(status, id);
 
   const kot = db.prepare(`
-    SELECT k.*, o.order_type, o.online_platform, o.is_online
+    SELECT k.*, o.order_type, o.online_platform, o.is_online, COALESCE(k.waiter_id, o.waiter_id) as waiter_id
     FROM kot k
     LEFT JOIN orders o ON k.order_id = o.id
     WHERE k.id = ?
   `).get(id);
 
   if (req.io && kot) {
-    const tableInfo = db.prepare('SELECT table_number FROM tables WHERE id = ?').get(kot.table_id);
-    let resolvedTableNumber = tableInfo ? tableInfo.table_number : `Table ${kot.table_id}`;
+    const tableInfo = db.prepare('SELECT table_number, is_deleted FROM tables WHERE id = ?').get(kot.table_id);
+    let resolvedTableNumber = tableInfo
+      ? (tableInfo.is_deleted ? `${tableInfo.table_number} (Deleted)` : tableInfo.table_number)
+      : `Table ${kot.table_id}`;
     if (kot.order_type === 'takeaway') resolvedTableNumber = 'Takeaway';
     if (kot.order_type === 'delivery') resolvedTableNumber = 'Free Home Delivery';
 
@@ -145,7 +149,8 @@ const updateKotStatus = (req, res) => {
       tableId: kot.table_id,
       tableNumber: resolvedTableNumber,
       orderType: kot.order_type,
-      onlinePlatform: kot.online_platform
+      onlinePlatform: kot.online_platform,
+      waiterId: kot.waiter_id || null
     };
 
     req.io.of('/customer').to(`order:${kot.order_id}`).emit('kot:statusUpdate', payload);
@@ -161,7 +166,8 @@ const updateKotStatus = (req, res) => {
         tableId: kot.table_id,
         tableNumber: resolvedTableNumber,
         orderType: kot.order_type,
-        onlinePlatform: kot.online_platform
+        onlinePlatform: kot.online_platform,
+        waiterId: kot.waiter_id || null
       });
     }
   }

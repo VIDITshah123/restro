@@ -72,9 +72,13 @@ const createReport = (req, res) => {
     const reportId = info.lastInsertRowid;
 
     const report = db.prepare(`
-      SELECT r.*, t.table_number 
+      SELECT r.*, 
+        CASE 
+          WHEN t.is_deleted = 1 THEN COALESCE(t.table_number, 'Table ' || r.table_id) || ' (Deleted)' 
+          ELSE COALESCE(t.table_number, 'Table ' || r.table_id) 
+        END as table_number 
       FROM customer_reports r
-      JOIN tables t ON r.table_id = t.id
+      LEFT JOIN tables t ON r.table_id = t.id
       WHERE r.id = ?
     `).get(reportId);
 
@@ -92,9 +96,13 @@ const createReport = (req, res) => {
 const getActiveReports = (req, res) => {
   try {
     const reports = db.prepare(`
-      SELECT r.*, t.table_number 
+      SELECT r.*, 
+        CASE 
+          WHEN t.is_deleted = 1 THEN COALESCE(t.table_number, 'Table ' || r.table_id) || ' (Deleted)' 
+          ELSE COALESCE(t.table_number, 'Table ' || r.table_id) 
+        END as table_number 
       FROM customer_reports r
-      JOIN tables t ON r.table_id = t.id
+      LEFT JOIN tables t ON r.table_id = t.id
       WHERE r.status = 'unread'
       ORDER BY r.created_at DESC
     `).all();
@@ -109,9 +117,13 @@ const getActiveReports = (req, res) => {
 const getReportsHistory = (req, res) => {
   try {
     const reports = db.prepare(`
-      SELECT r.*, t.table_number 
+      SELECT r.*, 
+        CASE 
+          WHEN t.is_deleted = 1 THEN COALESCE(t.table_number, 'Table ' || r.table_id) || ' (Deleted)' 
+          ELSE COALESCE(t.table_number, 'Table ' || r.table_id) 
+        END as table_number 
       FROM customer_reports r
-      JOIN tables t ON r.table_id = t.id
+      LEFT JOIN tables t ON r.table_id = t.id
       WHERE r.status = 'resolved'
       ORDER BY r.resolved_at DESC
     `).all();
@@ -127,9 +139,13 @@ const getActiveReportsByTable = (req, res) => {
   const { tableId } = req.params;
   try {
     const reports = db.prepare(`
-      SELECT r.*, t.table_number 
+      SELECT r.*, 
+        CASE 
+          WHEN t.is_deleted = 1 THEN COALESCE(t.table_number, 'Table ' || r.table_id) || ' (Deleted)' 
+          ELSE COALESCE(t.table_number, 'Table ' || r.table_id) 
+        END as table_number 
       FROM customer_reports r
-      JOIN tables t ON r.table_id = t.id
+      LEFT JOIN tables t ON r.table_id = t.id
       WHERE r.table_id = ? AND r.status = 'unread'
       ORDER BY r.created_at DESC
     `).all(parseInt(tableId));
@@ -164,9 +180,13 @@ const resolveReport = (req, res) => {
     updateStmt.run(resolvedAt, resolutionSeconds, reportId);
 
     const updatedReport = db.prepare(`
-      SELECT r.*, t.table_number 
+      SELECT r.*, 
+        CASE 
+          WHEN t.is_deleted = 1 THEN COALESCE(t.table_number, 'Table ' || r.table_id) || ' (Deleted)' 
+          ELSE COALESCE(t.table_number, 'Table ' || r.table_id) 
+        END as table_number 
       FROM customer_reports r
-      JOIN tables t ON r.table_id = t.id
+      LEFT JOIN tables t ON r.table_id = t.id
       WHERE r.id = ?
     `).get(reportId);
 

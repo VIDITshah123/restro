@@ -30,6 +30,7 @@ const TablesPage = () => {
   const [newTableNumber, setNewTableNumber] = useState('');
   const [newTableCapacity, setNewTableCapacity] = useState(4);
   const [newTableGroupId, setNewTableGroupId] = useState('');
+  const [newTableSlug, setNewTableSlug] = useState('');
   const [mergeTable1, setMergeTable1] = useState('');
   const [mergeTable2, setMergeTable2] = useState('');
   const [mergeError, setMergeError] = useState('');
@@ -116,8 +117,9 @@ const TablesPage = () => {
         table_number: newTableNumber.trim(),
         capacity: newTableCapacity,
         group_id: newTableGroupId || null,
+        custom_slug: newTableSlug.trim(),
       });
-      setNewTableNumber(''); setNewTableCapacity(4); setNewTableGroupId('');
+      setNewTableNumber(''); setNewTableCapacity(4); setNewTableGroupId(''); setNewTableSlug('');
       setShowAddTableModal(false);
       fetchTables();
     } catch (err) {
@@ -151,12 +153,13 @@ const TablesPage = () => {
 
   // Delete Table
   const handleDeleteTable = async (table) => {
-    const confirmed = await showConfirm(`Delete ${table.table_number}? This cannot be undone.`, {
-      title: 'Delete Table', danger: true, confirmLabel: 'Delete'
+    const confirmed = await showConfirm(`Delete ${table.table_number}? This will remove the table from active lists while preserving all past order, billing, and report records.`, {
+      title: 'Delete Table', danger: true, confirmLabel: 'Delete Table'
     });
     if (!confirmed) return;
     try {
-      await api.delete(`/tables/${table.id}`);
+      const res = await api.delete(`/tables/${table.id}`);
+      await showAlert(res.data?.message || 'Table deleted successfully. Past records preserved.', { title: 'Table Deleted' });
       fetchTables();
     } catch (err) {
       await showAlert(err.response?.data?.message || 'Error deleting table.', { title: 'Error', danger: true });
@@ -387,10 +390,21 @@ const TablesPage = () => {
                 </div>
               )}
 
-              {/* QR */}
+              {/* QR & Menu URL */}
               {table.qr_code_url && (
-                <div className="bg-white rounded-xl p-1.5 mb-3 self-center">
-                  <img src={table.qr_code_url} alt={`QR for ${table.table_number}`} className="w-20 h-20" />
+                <div className="flex flex-col items-center mb-3">
+                  <div className="bg-white rounded-xl p-1.5 mb-1.5">
+                    <img src={table.qr_code_url} alt={`QR for ${table.table_number}`} className="w-20 h-20" />
+                  </div>
+                  <a
+                    href={`/menu/${table.slug || table.id}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[10px] font-mono text-amber-500/80 hover:text-amber-400 bg-white/5 border border-white/5 hover:border-amber-500/30 rounded-lg px-2 py-0.5 max-w-[180px] truncate transition-all text-center"
+                    title={`http://localhost:5173/menu/${table.slug || table.id}`}
+                  >
+                    /menu/{table.slug || table.id} ↗
+                  </a>
                 </div>
               )}
 
@@ -488,6 +502,28 @@ const TablesPage = () => {
                     </select>
                   </div>
                 )}
+                <div>
+                  <label className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1.5">
+                    Custom Menu URL (After /menu/)
+                  </label>
+                  <div className="flex items-center bg-[#1a1a1a] border border-white/10 rounded-xl px-3 py-2 text-xs focus-within:border-amber-500/50">
+                    <span className="text-gray-500 font-mono text-[11px] select-none shrink-0">http://localhost:5173/menu/</span>
+                    <input
+                      type="text"
+                      value={newTableSlug}
+                      onChange={e => setNewTableSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-_]/g, '-'))}
+                      placeholder={
+                        (() => {
+                          const gName = groups.find(g => String(g.id) === String(newTableGroupId))?.name || '';
+                          const tNum = newTableNumber || 'table-01';
+                          return `${gName ? gName.toLowerCase().replace(/\s+/g, '-') + '-' : ''}${tNum.toLowerCase().replace(/\s+/g, '-')}`;
+                        })()
+                      }
+                      className="bg-transparent text-amber-400 font-mono text-xs outline-none flex-1 ml-0.5 placeholder:text-gray-600"
+                    />
+                  </div>
+                  <p className="text-[10px] text-gray-500 mt-1">Default is Table Group followed by Table Number.</p>
+                </div>
                 {addTableError && (
                   <div className="flex items-center gap-2 text-red-400 text-xs bg-red-500/10 border border-red-500/20 rounded-xl p-3">
                     <AlertCircle size={13} /> {addTableError}

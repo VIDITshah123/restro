@@ -101,7 +101,7 @@ const MenuPage = () => {
         try {
           const tableRes = await api.get(`/tables/${tableId}`);
           if (tableRes.data?.data?.table_number) {
-            setTable(tableId, tableRes.data.data.table_number);
+            setTable(tableRes.data.data.id, tableRes.data.data.table_number);
           } else {
             setTable(tableId, `Table ${tableId}`);
           }

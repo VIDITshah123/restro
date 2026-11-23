@@ -91,6 +91,9 @@ io.of('/waiter').on('connection', (socket) => {
 
 // Auth
 app.post('/api/auth/login', authController.login);
+app.post('/api/auth/google', authController.googleLogin);
+app.post('/api/auth/waiter-login', waiterController.waiterLogin);
+app.post('/api/auth/waiter-google', waiterController.googleWaiterLogin);
 app.post('/api/auth/logout', authenticate, authController.logout);
 
 // Menu
@@ -151,12 +154,12 @@ app.delete('/api/kot/history/clear', authenticate, authorize('admin'), orderCont
 app.get('/api/analytics/comprehensive', authenticate, authorize('admin'), analyticsController.getComprehensiveAnalytics);
 app.get('/api/analytics/top-dishes', authenticate, authorize('admin'), analyticsController.getTopDishes);
 
-// Waiters (Admin CRUD)
-app.post('/api/auth/waiter-login', waiterController.waiterLogin);
+// Waiters (Admin CRUD & Waiter Self-Service)
 app.get('/api/waiters', authenticate, authorize('admin'), waiterController.getWaiters);
 app.post('/api/waiters', authenticate, authorize('admin'), waiterController.createWaiter);
 app.put('/api/waiters/:id', authenticate, authorize('admin'), waiterController.updateWaiter);
 app.delete('/api/waiters/:id', authenticate, authorize('admin'), waiterController.deleteWaiter);
+app.get('/api/waiters/my-orders', authenticate, waiterController.getWaiterLiveOrders);
 
 // Billing — get all unbilled orders for a table
 app.get('/api/billing/pending', authenticate, authorize(['admin', 'manager']), orderController.getPendingBills);

@@ -5,8 +5,40 @@ export const useAuthStore = create(persist((set) => ({
   token: null,
   role: null,
   email: null,
-  login: (token, role, email) => set({ token, role, email }),
-  logout: () => set({ token: null, role: null, email: null })
+  name: null,
+  waiterId: null,
+  permissions: {
+    can_place_order: true,
+    can_cancel_order: false,
+    can_place_online_order: false,
+    can_place_takeaway_delivery: false
+  },
+  login: (token, role, emailOrName, permissions = null, waiterId = null) => set({
+    token,
+    role,
+    email: typeof emailOrName === 'string' && emailOrName.includes('@') ? emailOrName : null,
+    name: typeof emailOrName === 'string' && !emailOrName.includes('@') ? emailOrName : (emailOrName || 'Staff'),
+    waiterId: waiterId || null,
+    permissions: permissions || {
+      can_place_order: true,
+      can_cancel_order: false,
+      can_place_online_order: false,
+      can_place_takeaway_delivery: false
+    }
+  }),
+  logout: () => set({
+    token: null,
+    role: null,
+    email: null,
+    name: null,
+    waiterId: null,
+    permissions: {
+      can_place_order: true,
+      can_cancel_order: false,
+      can_place_online_order: false,
+      can_place_takeaway_delivery: false
+    }
+  })
 }), { name: 'restro-auth-storage' }));
 
 export const useSessionStore = create(persist((set) => ({

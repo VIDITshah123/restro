@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store';
+import ErrorBoundary from './components/common/ErrorBoundary';
 
 import MenuPage from './pages/customer/MenuPage';
 import CartPage from './pages/customer/CartPage';
@@ -9,7 +10,6 @@ import AdminLogin from './pages/admin/AdminLogin';
 import AdminLayout from './pages/admin/AdminLayout';
 import DashboardPage from './pages/admin/DashboardPage';
 import OrdersPage from './pages/admin/OrdersPage';
-import ActiveOrdersPage from './pages/admin/ActiveOrdersPage';
 import MenuManagementPage from './pages/admin/MenuManagementPage';
 import TablesPage from './pages/admin/TablesPage';
 import AnalyticsPage from './pages/admin/AnalyticsPage';
@@ -35,53 +35,54 @@ const ProtectedRoute = ({ children, roles }) => {
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        {/* Customer Portal */}
-        <Route path="/menu/:tableId" element={<MenuPage />} />
-        <Route path="/cart" element={<CartPage />} />
-        <Route path="/order-status/:orderId" element={<OrderStatusPage />} />
+    <ErrorBoundary>
+      <Router>
+        <Routes>
+          {/* Customer Portal */}
+          <Route path="/menu/:tableId" element={<MenuPage />} />
+          <Route path="/cart" element={<CartPage />} />
+          <Route path="/order-status/:orderId" element={<OrderStatusPage />} />
 
-        {/* Admin Portal */}
-        <Route path="/admin/login" element={<AdminLogin />} />
-        <Route path="/admin" element={
-          <ProtectedRoute roles={['admin', 'manager']}>
-            <AdminLayout />
-          </ProtectedRoute>
-        }>
-          <Route path="dashboard" element={<DashboardPage />} />
-          <Route path="orders" element={<OrdersPage />} />
-          <Route path="active-orders" element={<ActiveOrdersPage />} />
-          <Route path="billing" element={<BillingPage />} />
-          <Route path="menu" element={<MenuManagementPage />} />
-          <Route path="tables" element={<TablesPage />} />
-          <Route path="staff-roster" element={<StaffRosterPage />} />
-          <Route path="waiters" element={<WaitersPage />} />
-          <Route path="analytics" element={<AnalyticsPage />} />
-          <Route path="kot-history" element={<KOTHistory />} />
-          <Route path="reports" element={<ReportsPage />} />
-          <Route path="cancellations" element={<CancellationLogPage />} />
-        </Route>
+          {/* Admin Portal */}
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route path="/admin" element={
+            <ProtectedRoute roles={['admin', 'manager']}>
+              <AdminLayout />
+            </ProtectedRoute>
+          }>
+            <Route path="dashboard" element={<DashboardPage />} />
+            <Route path="orders" element={<OrdersPage />} />
+            <Route path="billing" element={<BillingPage />} />
+            <Route path="menu" element={<MenuManagementPage />} />
+            <Route path="tables" element={<TablesPage />} />
+            <Route path="staff-roster" element={<StaffRosterPage />} />
+            <Route path="waiters" element={<WaitersPage />} />
+            <Route path="analytics" element={<AnalyticsPage />} />
+            <Route path="kot-history" element={<KOTHistory />} />
+            <Route path="reports" element={<ReportsPage />} />
+            <Route path="cancellations" element={<CancellationLogPage />} />
+          </Route>
 
-        {/* Kitchen Portal */}
-        <Route path="/kitchen" element={
-          <ProtectedRoute roles={['admin', 'kitchen']}>
-            <KOTBoard />
-          </ProtectedRoute>
-        } />
-        <Route path="/kitchen/history" element={
-          <ProtectedRoute roles={['admin', 'kitchen']}>
-            <KOTHistory />
-          </ProtectedRoute>
-        } />
-        
-        {/* Waiter Portal */}
-        <Route path="/waiter/login" element={<WaiterLogin />} />
-        <Route path="/waiter" element={<WaiterDashboard />} />
-        
-        <Route path="/" element={<Navigate to="/menu/1" />} />
-      </Routes>
-    </Router>
+          {/* Kitchen Portal */}
+          <Route path="/kitchen" element={
+            <ProtectedRoute roles={['admin', 'kitchen']}>
+              <KOTBoard />
+            </ProtectedRoute>
+          } />
+          <Route path="/kitchen/history" element={
+            <ProtectedRoute roles={['admin', 'kitchen']}>
+              <KOTHistory />
+            </ProtectedRoute>
+          } />
+          
+          {/* Waiter Portal */}
+          <Route path="/waiter/login" element={<WaiterLogin />} />
+          <Route path="/waiter" element={<WaiterDashboard />} />
+          
+          <Route path="/" element={<Navigate to="/menu/1" />} />
+        </Routes>
+      </Router>
+    </ErrorBoundary>
   );
 }
 

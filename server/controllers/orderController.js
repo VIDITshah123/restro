@@ -12,9 +12,12 @@ const createOrder = (req, res) => {
     customerAddress = '',
     items = [],
     notes = '',
-    source = 'staff'
+    source = 'staff',
+    waiterId = null
   } = req.body;
   // items: [{ menuItemId, quantity, specialNotes, price, costPrice }]
+
+  const effectiveWaiterId = waiterId || (req.user?.role === 'waiter' ? req.user.id : null);
 
   try {
     const maxRow = db.prepare('SELECT MAX(order_number) as max_num FROM orders WHERE is_hidden = 0').get();
@@ -49,8 +52,8 @@ const createOrder = (req, res) => {
       INSERT INTO orders (
         table_id, total_amount, order_number, order_type,
         is_online, online_platform, customer_name, customer_phone,
-        customer_address, session_id, source
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        customer_address, session_id, source, waiter_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const insertOrderItem = db.prepare(`
@@ -78,7 +81,8 @@ const createOrder = (req, res) => {
         customerPhone || '',
         customerAddress || '',
         sessionId,
-        source
+        source,
+        effectiveWaiterId
       );
       orderId = orderInfo.lastInsertRowid;
 
@@ -98,9 +102,9 @@ const createOrder = (req, res) => {
       // Generate KOT
       const kotNumber = kotService.generateKotNumber();
       const kotInfo = db.prepare(`
-        INSERT INTO kot (kot_number, order_id, table_id, status, order_type, online_platform, customer_name, customer_phone, customer_address)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(kotNumber, orderId, effectiveTableId, 'received', orderType, onlinePlatform || '', customerName || '', customerPhone || '', customerAddress || '');
+        INSERT INTO kot (kot_number, order_id, table_id, status, order_type, online_platform, customer_name, customer_phone, customer_address, waiter_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(kotNumber, orderId, effectiveTableId, 'received', orderType, onlinePlatform || '', customerName || '', customerPhone || '', customerAddress || '', effectiveWaiterId);
       kotId = kotInfo.lastInsertRowid;
 
       // Record order_items in kot_items
@@ -153,6 +157,7 @@ const getOrders = (req, res) => {
       CASE
         WHEN o.order_type = 'takeaway' THEN 'Takeaway'
         WHEN o.order_type = 'delivery' THEN 'Free Home Delivery'
+        WHEN t.is_deleted = 1 THEN COALESCE(t.table_number, 'Table ' || o.table_id) || ' (Deleted)'
         ELSE COALESCE(t.table_number, 'Table ' || o.table_id)
       END as table_number,
       k.kot_number, k.status as kot_status
@@ -173,6 +178,7 @@ const getSessions = (req, res) => {
         CASE
           WHEN o.order_type = 'takeaway' THEN 'Takeaway'
           WHEN o.order_type = 'delivery' THEN 'Free Home Delivery'
+          WHEN t.is_deleted = 1 THEN COALESCE(t.table_number, 'Table ' || o.table_id) || ' (Deleted)'
           ELSE COALESCE(t.table_number, 'Table ' || o.table_id)
         END as table_number,
         k.kot_number, k.status as kot_status
@@ -298,6 +304,7 @@ const getOrderById = (req, res) => {
       CASE
         WHEN o.order_type = 'takeaway' THEN 'Takeaway'
         WHEN o.order_type = 'delivery' THEN 'Free Home Delivery'
+        WHEN t.is_deleted = 1 THEN COALESCE(t.table_number, 'Table ' || o.table_id) || ' (Deleted)'
         ELSE COALESCE(t.table_number, 'Table ' || o.table_id)
       END as table_number
     FROM orders o
@@ -362,6 +369,7 @@ const requestBill = (req, res) => {
       CASE
         WHEN o.order_type = 'takeaway' THEN 'Takeaway'
         WHEN o.order_type = 'delivery' THEN 'Free Home Delivery'
+        WHEN t.is_deleted = 1 THEN COALESCE(t.table_number, 'Table ' || o.table_id) || ' (Deleted)'
         ELSE COALESCE(t.table_number, 'Table ' || o.table_id)
       END as table_number
     FROM orders o
@@ -406,6 +414,7 @@ const getBillingForTable = (req, res) => {
       CASE
           WHEN o.order_type = 'takeaway' THEN 'Takeaway'
           WHEN o.order_type = 'delivery' THEN 'Free Home Delivery'
+          WHEN t.is_deleted = 1 THEN COALESCE(t.table_number, 'Table ' || o.table_id) || ' (Deleted)'
           ELSE COALESCE(t.table_number, 'Table ' || o.table_id)
       END as table_number,
       k.status as kot_status
@@ -421,6 +430,7 @@ const getBillingForTable = (req, res) => {
         CASE
           WHEN o.order_type = 'takeaway' THEN 'Takeaway'
           WHEN o.order_type = 'delivery' THEN 'Free Home Delivery'
+          WHEN t.is_deleted = 1 THEN COALESCE(t.table_number, 'Table ' || o.table_id) || ' (Deleted)'
           ELSE COALESCE(t.table_number, 'Table ' || o.table_id)
         END as table_number,
         k.status as kot_status
@@ -595,7 +605,7 @@ const getPendingBills = (req, res) => {
         (SELECT COUNT(*) FROM orders o WHERE o.table_id = t.id AND o.status != 'billed') as order_count,
         (SELECT COALESCE(SUM(o.total_amount), 0) FROM orders o WHERE o.table_id = t.id AND o.status != 'billed') as total_amount
       FROM tables t
-      WHERE t.status IN ('occupied', 'hold') AND t.id NOT IN (9991, 9992)
+      WHERE t.status IN ('occupied', 'hold') AND t.id NOT IN (9991, 9992) AND COALESCE(t.is_deleted, 0) = 0
       ORDER BY t.table_number ASC
     `).all();
 
@@ -604,6 +614,7 @@ const getPendingBills = (req, res) => {
         CASE
           WHEN o.order_type = 'takeaway' THEN 'Takeaway'
           WHEN o.order_type = 'delivery' THEN 'Free Home Delivery'
+          WHEN t.is_deleted = 1 THEN COALESCE(t.table_number, 'Table ' || o.table_id) || ' (Deleted)'
           ELSE COALESCE(t.table_number, 'Table ' || o.table_id)
         END as table_number,
         k.status as kot_status
@@ -647,7 +658,12 @@ const addItemsToOrder = (req, res) => {
   try {
     const order = db.prepare(`
       SELECT o.*,
-        COALESCE(t.table_number, 'Table ' || o.table_id) as table_number
+        CASE
+          WHEN o.order_type = 'takeaway' THEN 'Takeaway'
+          WHEN o.order_type = 'delivery' THEN 'Free Home Delivery'
+          WHEN t.is_deleted = 1 THEN COALESCE(t.table_number, 'Table ' || o.table_id) || ' (Deleted)'
+          ELSE COALESCE(t.table_number, 'Table ' || o.table_id)
+        END as table_number
       FROM orders o
       LEFT JOIN tables t ON o.table_id = t.id
       WHERE o.id = ?
@@ -792,7 +808,10 @@ const getCancellationLog = (req, res) => {
     SELECT c.*,
       o.order_number,
       o.table_id,
-      COALESCE(t.table_number, 'Table ' || o.table_id) as table_number
+      CASE 
+        WHEN t.is_deleted = 1 THEN COALESCE(t.table_number, 'Table ' || o.table_id) || ' (Deleted)' 
+        ELSE COALESCE(t.table_number, 'Table ' || o.table_id) 
+      END as table_number
     FROM order_item_cancellations c
     JOIN orders o ON c.order_id = o.id
     LEFT JOIN tables t ON o.table_id = t.id

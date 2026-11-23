@@ -25,6 +25,9 @@ const StaffRosterPage = () => {
   const [activeTab, setActiveTab] = useState('attendance'); // 'attendance' | 'directory' | 'overtime' | 'payroll'
   const [staffList, setStaffList] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [rolesList, setRolesList] = useState(ROLES);
+  const [isOtherRole, setIsOtherRole] = useState(false);
+  const [customRoleInput, setCustomRoleInput] = useState('');
 
   // Attendance state
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split('T')[0]);
@@ -84,7 +87,12 @@ const StaffRosterPage = () => {
     try {
       setLoading(true);
       const res = await api.get('/staff');
-      setStaffList(res.data?.data || []);
+      const data = res.data?.data || [];
+      setStaffList(data);
+      const customExistingRoles = Array.from(new Set(data.map(s => s.role).filter(r => r && !ROLES.includes(r))));
+      if (customExistingRoles.length > 0) {
+        setRolesList(prev => [...customExistingRoles, ...prev.filter(r => !customExistingRoles.includes(r))]);
+      }
     } catch (err) {
       console.error('Error fetching staff list:', err);
     } finally {
@@ -188,9 +196,11 @@ const StaffRosterPage = () => {
   // ── Staff Add / Edit ────────────────────────────────────────────────────────
   const openAddStaff = () => {
     setEditingStaff(null);
+    setIsOtherRole(false);
+    setCustomRoleInput('');
     setStaffFormData({
       name: '',
-      role: 'Waiter',
+      role: rolesList[0] || 'Waiter',
       mobile_number: '',
       alt_number: '',
       address: '',
@@ -204,9 +214,15 @@ const StaffRosterPage = () => {
 
   const openEditStaff = (staff) => {
     setEditingStaff(staff);
+    const roleVal = staff.role || 'Waiter';
+    if (!rolesList.includes(roleVal) && roleVal !== 'Other') {
+      setRolesList(prev => [roleVal, ...prev.filter(r => r !== roleVal && r !== 'Other'), 'Other']);
+    }
+    setIsOtherRole(false);
+    setCustomRoleInput('');
     setStaffFormData({
       name: staff.name,
-      role: staff.role || 'Waiter',
+      role: roleVal,
       mobile_number: staff.mobile_number || '',
       alt_number: staff.alt_number || '',
       address: staff.address || '',
@@ -230,14 +246,29 @@ const StaffRosterPage = () => {
       return;
     }
 
+    let resolvedRole = staffFormData.role;
+    if (isOtherRole || staffFormData.role === 'Other') {
+      if (!customRoleInput.trim()) {
+        setStaffFormError('Please specify the custom designation.');
+        return;
+      }
+      resolvedRole = customRoleInput.trim();
+      setRolesList(prev => [resolvedRole, ...prev.filter(r => r !== resolvedRole && r !== 'Other'), 'Other']);
+    }
+
+    const payload = {
+      ...staffFormData,
+      role: resolvedRole
+    };
+
     setIsSubmittingStaff(true);
     try {
       if (editingStaff) {
-        await api.put(`/staff/${editingStaff.id}`, staffFormData);
-        await showAlert(`Staff "${staffFormData.name}" updated successfully.`, { title: 'Updated' });
+        await api.put(`/staff/${editingStaff.id}`, payload);
+        await showAlert(`Staff "${payload.name}" updated successfully.`, { title: 'Updated' });
       } else {
-        await api.post('/staff', staffFormData);
-        await showAlert(`Staff "${staffFormData.name}" added successfully.`, { title: 'Added' });
+        await api.post('/staff', payload);
+        await showAlert(`Staff "${payload.name}" added successfully.`, { title: 'Added' });
       }
       setShowStaffModal(false);
       fetchStaff();
@@ -618,7 +649,7 @@ const StaffRosterPage = () => {
                 className="bg-[#0f0f0f] border border-white/10 text-gray-300 text-xs rounded-xl px-3 py-2 outline-none focus:border-amber-500/50"
               >
                 <option value="All">All Roles</option>
-                {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                {rolesList.map(r => <option key={r} value={r}>{r}</option>)}
               </select>
             </div>
           </div>
@@ -959,12 +990,55 @@ const StaffRosterPage = () => {
                       Role / Designation
                     </label>
                     <select
-                      value={staffFormData.role}
-                      onChange={e => setStaffFormData({ ...staffFormData, role: e.target.value })}
+                      value={isOtherRole ? 'Other' : staffFormData.role}
+                      onChange={e => {
+                        const val = e.target.value;
+                        if (val === 'Other') {
+                          setIsOtherRole(true);
+                          setStaffFormData({ ...staffFormData, role: 'Other' });
+                        } else {
+                          setIsOtherRole(false);
+                          setStaffFormData({ ...staffFormData, role: val });
+                        }
+                      }}
                       className="w-full bg-[#181818] border border-white/10 rounded-xl px-3 py-2.5 text-sm text-gray-200 outline-none focus:border-amber-500/50"
                     >
-                      {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                      {rolesList.map(r => <option key={r} value={r}>{r}</option>)}
                     </select>
+
+                    {/* Task 7: If Other is selected, specify custom designation and display on top */}
+                    {(isOtherRole || staffFormData.role === 'Other') && (
+                      <div className="mt-2 space-y-1 bg-amber-500/5 border border-amber-500/20 rounded-xl p-2.5">
+                        <label className="text-[10px] font-black uppercase tracking-wider text-amber-400 block">
+                          Specify Designation (Adds to Top of List)
+                        </label>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            placeholder="e.g. Pastry Chef, Hostess..."
+                            value={customRoleInput}
+                            onChange={e => setCustomRoleInput(e.target.value)}
+                            className="flex-1 bg-[#121212] border border-amber-500/40 rounded-lg px-2.5 py-1.5 text-xs text-gray-100 outline-none focus:border-amber-500"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const trimmed = customRoleInput.trim();
+                              if (trimmed) {
+                                setRolesList(prev => [trimmed, ...prev.filter(r => r !== trimmed && r !== 'Other'), 'Other']);
+                                setStaffFormData({ ...staffFormData, role: trimmed });
+                                setIsOtherRole(false);
+                                setCustomRoleInput('');
+                              }
+                            }}
+                            disabled={!customRoleInput.trim()}
+                            className="px-2.5 py-1.5 bg-amber-500 hover:bg-amber-400 text-black font-black text-xs rounded-lg transition-colors disabled:opacity-40 cursor-pointer"
+                          >
+                            Set on Top
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                   <div>
                     <label className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block mb-1">

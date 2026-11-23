@@ -176,7 +176,6 @@ const AdminLayout = () => {
   const navItems = [
     { name: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
     { name: 'Orders', path: '/admin/orders', icon: ListOrdered },
-    { name: 'Active Orders', path: '/admin/active-orders', icon: Utensils },
     { name: 'Billing', path: '/admin/billing', icon: Receipt },
     { name: 'Menu', path: '/admin/menu', icon: MenuSquare },
     { name: 'Tables', path: '/admin/tables', icon: Grid },

@@ -1,6 +1,18 @@
 const db = require('../db');
 const qrcode = require('qrcode');
 
+const slugify = (text) => {
+  return text
+    .toString()
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/[^\w-]+/g, '')
+    .replace(/--+/g, '-')
+    .replace(/^-+/, '')
+    .replace(/-+$/, '');
+};
+
 // ── Table Groups ──────────────────────────────────────────────────────────────
 
 const getTableGroups = (req, res) => {
@@ -28,9 +40,9 @@ const createTableGroup = (req, res) => {
 const deleteTableGroup = (req, res) => {
   const { id } = req.params;
   try {
-    const inUse = db.prepare('SELECT COUNT(*) as count FROM tables WHERE group_id = ?').get(id);
+    const inUse = db.prepare('SELECT COUNT(*) as count FROM tables WHERE group_id = ? AND COALESCE(is_deleted, 0) = 0').get(id);
     if (inUse.count > 0) {
-      return res.status(409).json({ success: false, message: 'Cannot delete group: tables are assigned to it. Remove tables from this group first.' });
+      return res.status(409).json({ success: false, message: 'Cannot delete group: active tables are assigned to it. Remove tables from this group first.' });
     }
     db.prepare('DELETE FROM table_groups WHERE id = ?').run(id);
     res.json({ success: true });
@@ -44,17 +56,22 @@ const deleteTableGroup = (req, res) => {
 const getTables = (req, res) => {
   const includeSystem = req.query.includeSystem === 'true';
   const query = includeSystem
-    ? `SELECT t.*, tg.name as group_name FROM tables t LEFT JOIN table_groups tg ON t.group_id = tg.id ORDER BY t.id ASC`
-    : `SELECT t.*, tg.name as group_name FROM tables t LEFT JOIN table_groups tg ON t.group_id = tg.id WHERE t.id NOT IN (9991, 9992) AND t.table_number NOT IN ('Takeaway', 'Free Home Delivery') ORDER BY t.id ASC`;
+    ? `SELECT t.*, tg.name as group_name FROM tables t LEFT JOIN table_groups tg ON t.group_id = tg.id WHERE COALESCE(t.is_deleted, 0) = 0 ORDER BY t.id ASC`
+    : `SELECT t.*, tg.name as group_name FROM tables t LEFT JOIN table_groups tg ON t.group_id = tg.id WHERE COALESCE(t.is_deleted, 0) = 0 AND t.id NOT IN (9991, 9992) AND t.table_number NOT IN ('Takeaway', 'Free Home Delivery') ORDER BY t.id ASC`;
   const tables = db.prepare(query).all();
   res.json({ success: true, data: tables });
 };
 
 const getTableById = (req, res) => {
   const { tableId } = req.params;
+  const isNumeric = /^\d+$/.test(tableId);
   const table = db.prepare(
-    `SELECT t.*, tg.name as group_name FROM tables t LEFT JOIN table_groups tg ON t.group_id = tg.id WHERE t.id = ?`
-  ).get(tableId);
+    `SELECT t.*, tg.name as group_name 
+     FROM tables t 
+     LEFT JOIN table_groups tg ON t.group_id = tg.id 
+     WHERE (${isNumeric ? 't.id = ? OR ' : ''}t.slug = ?) AND COALESCE(t.is_deleted, 0) = 0`
+  ).get(...(isNumeric ? [parseInt(tableId), tableId] : [tableId]));
+
   if (!table) {
     return res.status(404).json({ success: false, message: 'Table not found' });
   }
@@ -62,21 +79,42 @@ const getTableById = (req, res) => {
 };
 
 const createTable = async (req, res) => {
-  const { table_number, capacity = 4, group_id = null } = req.body;
+  const { table_number, capacity = 4, group_id = null, custom_slug = '' } = req.body;
   if (!table_number || !table_number.trim()) {
     return res.status(400).json({ success: false, message: 'Table number is required.' });
   }
   try {
+    // Determine group name for default slug
+    let groupPrefix = '';
+    if (group_id) {
+      const g = db.prepare('SELECT name FROM table_groups WHERE id = ?').get(group_id);
+      if (g) groupPrefix = g.name;
+    }
+
+    let slug = custom_slug && custom_slug.trim()
+      ? slugify(custom_slug)
+      : slugify(`${groupPrefix ? groupPrefix + '-' : ''}${table_number}`);
+
+    if (!slug) {
+      slug = `table-${Date.now()}`;
+    }
+
+    // Ensure slug uniqueness
+    const existingSlug = db.prepare('SELECT id FROM tables WHERE slug = ?').get(slug);
+    if (existingSlug) {
+      slug = `${slug}-${Math.floor(100 + Math.random() * 900)}`;
+    }
+
     const insert = db.prepare(
-      'INSERT INTO tables (table_number, capacity, group_id) VALUES (?, ?, ?)'
+      'INSERT INTO tables (table_number, capacity, group_id, slug, is_deleted) VALUES (?, ?, ?, ?, 0)'
     );
-    const info = insert.run(table_number.trim(), capacity, group_id || null);
+    const info = insert.run(table_number.trim(), capacity, group_id || null, slug);
     const tableId = info.lastInsertRowid;
 
-    // Generate QR code
+    // Generate QR code pointing to custom slug URL
     const host = req.get('host') || 'localhost:5173';
     const protocol = req.protocol || 'http';
-    const menuUrl = `${protocol}://${host}/menu/${tableId}`;
+    const menuUrl = `${protocol}://${host}/menu/${slug}`;
     const qr_code_url = await qrcode.toDataURL(menuUrl);
 
     db.prepare('UPDATE tables SET qr_code_url = ? WHERE id = ?').run(qr_code_url, tableId);
@@ -88,7 +126,7 @@ const createTable = async (req, res) => {
     res.json({ success: true, data: table });
   } catch (error) {
     if (error.message.includes('UNIQUE')) {
-      return res.status(409).json({ success: false, message: `Table "${table_number}" already exists.` });
+      return res.status(409).json({ success: false, message: `Table "${table_number}" or slug already exists.` });
     }
     res.status(500).json({ success: false, message: error.message });
   }
@@ -102,28 +140,45 @@ const deleteTable = (req, res) => {
       return res.status(400).json({ success: false, message: 'Cannot delete system order channels (Takeaway / Delivery).' });
     }
 
-    const table = db.prepare('SELECT status, is_occupied FROM tables WHERE id = ?').get(parsedId);
-    if (table && (table.status === 'occupied' || table.status === 'hold' || table.is_occupied === 1)) {
-      return res.status(409).json({ success: false, message: 'Cannot delete an occupied or active table.' });
+    const table = db.prepare('SELECT * FROM tables WHERE id = ?').get(parsedId);
+    if (!table) {
+      return res.status(404).json({ success: false, message: 'Table not found.' });
     }
 
-    const activeOrders = db.prepare('SELECT COUNT(*) as count FROM orders WHERE table_id = ? AND is_hidden = 0').get(parsedId);
+    // Check if table currently has unbilled active orders
+    const activeOrders = db.prepare(`
+      SELECT COUNT(*) as count FROM orders 
+      WHERE table_id = ? AND is_hidden = 0 AND status NOT IN ('billed', 'cancelled')
+    `).get(parsedId);
+
     if (activeOrders.count > 0) {
       return res.status(409).json({
         success: false,
-        message: 'Cannot delete table. Please clear its orders from the Billing/Order History first.'
+        message: 'Cannot delete table with active unbilled orders. Please bill or clear its active session first.'
       });
     }
 
+    // Soft delete table - keep all past orders, KOTs, and reports completely intact!
     db.transaction(() => {
-      db.prepare('DELETE FROM kot WHERE table_id = ?').run(parsedId);
-      db.prepare('DELETE FROM order_items WHERE order_id IN (SELECT id FROM orders WHERE table_id = ?)').run(parsedId);
-      db.prepare('DELETE FROM orders WHERE table_id = ?').run(parsedId);
-      db.prepare('DELETE FROM tables WHERE id = ?').run(parsedId);
+      // Unmerge any tables linked with this table
+      db.prepare('UPDATE tables SET merged_with_id = NULL WHERE id = ? OR merged_with_id = ?').run(parsedId, parsedId);
+
+      // Set table as deleted & free
+      db.prepare(`
+        UPDATE tables 
+        SET is_deleted = 1, status = 'free', is_occupied = 0, merged_with_id = NULL, updated_at = datetime('now')
+        WHERE id = ?
+      `).run(parsedId);
     })();
 
-    res.json({ success: true });
+    if (req.io) {
+      req.io.of('/admin').emit('table:statusChanged', { tableId: parsedId, status: 'free' });
+      req.io.of('/waiter').emit('table:statusChanged', { tableId: parsedId, status: 'free' });
+    }
+
+    res.json({ success: true, message: `Table "${table.table_number}" deleted successfully. Past records have been preserved.` });
   } catch (error) {
+    console.error('Delete table error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -144,7 +199,7 @@ const updateTableStatus = (req, res) => {
   }
 
   try {
-    const table = db.prepare('SELECT id, status FROM tables WHERE id = ?').get(parsedId);
+    const table = db.prepare('SELECT id, status FROM tables WHERE id = ? AND COALESCE(is_deleted, 0) = 0').get(parsedId);
     if (!table) return res.status(404).json({ success: false, message: 'Table not found.' });
     if (table.status === 'hold') {
       return res.status(409).json({ success: false, message: 'Table has an active order. Bill the table first before changing status.' });
@@ -176,8 +231,8 @@ const mergeTables = (req, res) => {
     return res.status(400).json({ success: false, message: 'Cannot merge a table with itself.' });
   }
   try {
-    const t1 = db.prepare('SELECT * FROM tables WHERE id = ?').get(tableId1);
-    const t2 = db.prepare('SELECT * FROM tables WHERE id = ?').get(tableId2);
+    const t1 = db.prepare('SELECT * FROM tables WHERE id = ? AND COALESCE(is_deleted, 0) = 0').get(tableId1);
+    const t2 = db.prepare('SELECT * FROM tables WHERE id = ? AND COALESCE(is_deleted, 0) = 0').get(tableId2);
     if (!t1 || !t2) return res.status(404).json({ success: false, message: 'One or both tables not found.' });
     if (t1.status === 'hold' || t2.status === 'hold') {
       return res.status(409).json({ success: false, message: 'Cannot merge tables with active orders. Please bill all orders first.' });
