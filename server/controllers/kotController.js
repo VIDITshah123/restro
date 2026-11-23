@@ -11,9 +11,9 @@ const getKot = (req, res) => {
       COALESCE(k.order_type, o.order_type, 'dine_in') as order_type,
       COALESCE(o.is_online, 0) as is_online,
       COALESCE(k.online_platform, o.online_platform, '') as online_platform,
-      o.customer_name,
-      o.customer_phone,
-      o.customer_address
+      COALESCE(k.customer_name, o.customer_name, '') as customer_name,
+      COALESCE(k.customer_phone, o.customer_phone, '') as customer_phone,
+      COALESCE(k.customer_address, o.customer_address, '') as customer_address
     FROM kot k
     LEFT JOIN orders o ON k.order_id = o.id
     LEFT JOIN tables t ON k.table_id = t.id
@@ -22,12 +22,33 @@ const getKot = (req, res) => {
   `).all();
 
   for (const kot of kots) {
-    kot.items = db.prepare(`
-      SELECT oi.*, m.name, m.is_veg, m.description, m.category
-      FROM order_items oi 
-      JOIN menu_items m ON oi.menu_item_id = m.id 
-      WHERE oi.order_id = ?
-    `).all(kot.order_id);
+    // Check if this KOT has specific items recorded in kot_items (incremental KOT)
+    const kotItemIds = db.prepare(`
+      SELECT order_item_id FROM kot_items WHERE kot_id = ?
+    `).all(kot.id).map(r => r.order_item_id);
+
+    if (kotItemIds.length > 0) {
+      // Fetch only the specific items for this KOT
+      const placeholders = kotItemIds.map(() => '?').join(',');
+      kot.items = db.prepare(`
+        SELECT oi.id, oi.quantity, oi.special_notes, oi.menu_item_id,
+               oi.is_cancelled, oi.cancelled_at, oi.cancelled_reason,
+               m.name, m.is_veg, m.description, m.category
+        FROM order_items oi
+        JOIN menu_items m ON oi.menu_item_id = m.id
+        WHERE oi.id IN (${placeholders})
+      `).all(...kotItemIds);
+    } else {
+      // Legacy KOT without kot_items — show all non-cancelled items for this order
+      kot.items = db.prepare(`
+        SELECT oi.id, oi.quantity, oi.special_notes, oi.menu_item_id,
+               oi.is_cancelled, oi.cancelled_at, oi.cancelled_reason,
+               m.name, m.is_veg, m.description, m.category
+        FROM order_items oi
+        JOIN menu_items m ON oi.menu_item_id = m.id
+        WHERE oi.order_id = ? AND (oi.is_cancelled = 0 OR oi.is_cancelled IS NULL)
+      `).all(kot.order_id);
+    }
   }
 
   res.json({ success: true, data: kots });
@@ -46,9 +67,9 @@ const getKotHistory = (req, res) => {
       COALESCE(k.order_type, o.order_type, 'dine_in') as order_type,
       COALESCE(o.is_online, 0) as is_online,
       COALESCE(k.online_platform, o.online_platform, '') as online_platform,
-      o.customer_name,
-      o.customer_phone,
-      o.customer_address
+      COALESCE(k.customer_name, o.customer_name, '') as customer_name,
+      COALESCE(k.customer_phone, o.customer_phone, '') as customer_phone,
+      COALESCE(k.customer_address, o.customer_address, '') as customer_address
     FROM kot k
     LEFT JOIN orders o ON k.order_id = o.id
     LEFT JOIN tables t ON k.table_id = t.id
@@ -69,12 +90,30 @@ const getKotHistory = (req, res) => {
   const kots = db.prepare(query).all(...params);
 
   for (const kot of kots) {
-    kot.items = db.prepare(`
-      SELECT oi.*, m.name, m.is_veg, m.description, m.category
-      FROM order_items oi 
-      JOIN menu_items m ON oi.menu_item_id = m.id 
-      WHERE oi.order_id = ?
-    `).all(kot.order_id);
+    const kotItemIds = db.prepare(`
+      SELECT order_item_id FROM kot_items WHERE kot_id = ?
+    `).all(kot.id).map(r => r.order_item_id);
+
+    if (kotItemIds.length > 0) {
+      const placeholders = kotItemIds.map(() => '?').join(',');
+      kot.items = db.prepare(`
+        SELECT oi.id, oi.quantity, oi.special_notes, oi.menu_item_id,
+               oi.is_cancelled, oi.cancelled_at, oi.cancelled_reason,
+               m.name, m.is_veg, m.description, m.category
+        FROM order_items oi
+        JOIN menu_items m ON oi.menu_item_id = m.id
+        WHERE oi.id IN (${placeholders})
+      `).all(...kotItemIds);
+    } else {
+      kot.items = db.prepare(`
+        SELECT oi.id, oi.quantity, oi.special_notes, oi.menu_item_id,
+               oi.is_cancelled, oi.cancelled_at, oi.cancelled_reason,
+               m.name, m.is_veg, m.description, m.category
+        FROM order_items oi
+        JOIN menu_items m ON oi.menu_item_id = m.id
+        WHERE oi.order_id = ? AND (oi.is_cancelled = 0 OR oi.is_cancelled IS NULL)
+      `).all(kot.order_id);
+    }
   }
 
   res.json({ success: true, data: kots });
@@ -88,8 +127,8 @@ const updateKotStatus = (req, res) => {
 
   const kot = db.prepare(`
     SELECT k.*, o.order_type, o.online_platform, o.is_online
-    FROM kot k 
-    LEFT JOIN orders o ON k.order_id = o.id 
+    FROM kot k
+    LEFT JOIN orders o ON k.order_id = o.id
     WHERE k.id = ?
   `).get(id);
 
@@ -99,39 +138,39 @@ const updateKotStatus = (req, res) => {
     if (kot.order_type === 'takeaway') resolvedTableNumber = 'Takeaway';
     if (kot.order_type === 'delivery') resolvedTableNumber = 'Free Home Delivery';
 
-      const payload = {
+    const payload = {
+      kotId: parseInt(id),
+      newStatus: status,
+      orderId: kot.order_id,
+      tableId: kot.table_id,
+      tableNumber: resolvedTableNumber,
+      orderType: kot.order_type,
+      onlinePlatform: kot.online_platform
+    };
+
+    req.io.of('/customer').to(`order:${kot.order_id}`).emit('kot:statusUpdate', payload);
+    req.io.of('/customer').to(`table:${kot.table_id}`).emit('kot:statusUpdate', payload);
+    req.io.of('/admin').to('admin:global').emit('kot:statusUpdate', payload);
+    req.io.of('/kitchen').to('kitchen:global').emit('kot:statusUpdate', payload);
+    req.io.of('/waiter').to('waiter:global').emit('kot:statusUpdate', payload);
+
+    if (status === 'ready') {
+      req.io.of('/waiter').to('waiter:global').emit('order:ready', {
         kotId: parseInt(id),
-        newStatus: status,
         orderId: kot.order_id,
         tableId: kot.table_id,
         tableNumber: resolvedTableNumber,
         orderType: kot.order_type,
         onlinePlatform: kot.online_platform
-      };
-
-      req.io.of('/customer').to(`order:${kot.order_id}`).emit('kot:statusUpdate', payload);
-      req.io.of('/customer').to(`table:${kot.table_id}`).emit('kot:statusUpdate', payload);
-      req.io.of('/admin').to('admin:global').emit('kot:statusUpdate', payload);
-      req.io.of('/kitchen').to('kitchen:global').emit('kot:statusUpdate', payload);
-      req.io.of('/waiter').to('waiter:global').emit('kot:statusUpdate', payload);
-
-      if (status === 'ready') {
-        req.io.of('/waiter').to('waiter:global').emit('order:ready', {
-          kotId: parseInt(id),
-          orderId: kot.order_id,
-          tableId: kot.table_id,
-        tableNumber: resolvedTableNumber,
-          orderType: kot.order_type,
-          onlinePlatform: kot.online_platform
-        });
-      }
+      });
     }
+  }
 
-    res.json({ success: true });
-  };
+  res.json({ success: true });
+};
 
-  module.exports = {
-    getKot,
-    getKotHistory,
-    updateKotStatus
-  };
+module.exports = {
+  getKot,
+  getKotHistory,
+  updateKotStatus
+};

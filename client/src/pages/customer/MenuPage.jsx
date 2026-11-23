@@ -98,23 +98,50 @@ const MenuPage = () => {
   useEffect(() => {
     const init = async () => {
       try {
-        const tableRes = await api.get(`/tables/${tableId}`);
-        setTable(tableId, tableRes.data.data.table_number);
+        try {
+          const tableRes = await api.get(`/tables/${tableId}`);
+          if (tableRes.data?.data?.table_number) {
+            setTable(tableId, tableRes.data.data.table_number);
+          } else {
+            setTable(tableId, `Table ${tableId}`);
+          }
+        } catch {
+          // If specific tableId not found, try getting all tables and picking first
+          try {
+            const allTables = await api.get('/tables');
+            if (allTables.data?.data?.length > 0) {
+              const firstT = allTables.data.data[0];
+              setTable(firstT.id, firstT.table_number);
+            } else {
+              setTable(tableId, `Table ${tableId}`);
+            }
+          } catch {
+            setTable(tableId, `Table ${tableId}`);
+          }
+        }
 
         const menuRes = await api.get('/menu');
-        setMenu(menuRes.data.data);
+        setMenu(menuRes.data?.data || []);
 
         const catRes = await api.get('/menu/categories');
-        setCategories(['All', ...catRes.data.data]);
+        setCategories(['All', ...(catRes.data?.data || [])]);
 
-        // Fetch AI trending
-        const trendRes = await api.get('/ai/trending');
-        setTrending(trendRes.data.trending);
+        // Fetch AI trending (graceful fallback)
+        try {
+          const trendRes = await api.get('/ai/trending');
+          setTrending(trendRes.data?.trending || []);
+        } catch {
+          setTrending([]);
+        }
 
-        // Fetch AI recommendations based on session/cart
-        const cartItemIds = cartItems.map(i => i.menuItemId);
-        const recRes = await api.post('/ai/recommendations', { cartItemIds });
-        setRecommendations(recRes.data.recommendations);
+        // Fetch AI recommendations based on session/cart (graceful fallback)
+        try {
+          const cartItemIds = cartItems.map(i => i.menuItemId);
+          const recRes = await api.post('/ai/recommendations', { cartItemIds });
+          setRecommendations(recRes.data?.recommendations || []);
+        } catch {
+          setRecommendations([]);
+        }
       } catch (err) {
         console.error('Error initializing menu:', err);
       }

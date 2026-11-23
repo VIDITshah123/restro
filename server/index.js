@@ -19,6 +19,7 @@ const analyticsController = require('./controllers/analyticsController');
 const waiterController = require('./controllers/waiterController');
 const variantController = require('./controllers/variantController');
 const reportController = require('./controllers/reportController');
+const staffController = require('./controllers/staffController');
 
 const app = express();
 const server = http.createServer(app);
@@ -108,11 +109,19 @@ app.post('/api/menu/:id/variants', authenticate, authorize('admin'), variantCont
 app.put('/api/menu/:id/variants/:variantId', authenticate, authorize('admin'), variantController.updateVariant);
 app.delete('/api/menu/:id/variants/:variantId', authenticate, authorize('admin'), variantController.deleteVariant);
 
-// Tables
+// Table Groups
+app.get('/api/table-groups', tableController.getTableGroups);
+app.post('/api/table-groups', authenticate, authorize('admin'), tableController.createTableGroup);
+app.delete('/api/table-groups/:id', authenticate, authorize('admin'), tableController.deleteTableGroup);
+
+// Tables — ORDER MATTERS: specific paths before :param paths
+app.post('/api/tables/merge', authenticate, tableController.mergeTables);
 app.get('/api/tables', tableController.getTables);
-app.get('/api/tables/:tableId', tableController.getTableById);
 app.post('/api/tables', authenticate, authorize('admin'), tableController.createTable);
+app.get('/api/tables/:tableId', tableController.getTableById);
 app.delete('/api/tables/:id', authenticate, authorize('admin'), tableController.deleteTable);
+app.patch('/api/tables/:id/status', authenticate, tableController.updateTableStatus);
+app.post('/api/tables/:id/unmerge', authenticate, tableController.unmergeTables);
 
 // Orders
 app.post('/api/orders', orderController.createOrder);
@@ -123,7 +132,14 @@ app.patch('/api/orders/:id/status', authenticate, authorize(['admin', 'manager']
 app.post('/api/orders/:id/bill', authenticate, authorize(['admin', 'manager']), orderController.generateBill);
 app.post('/api/orders/:id/bill-single', authenticate, authorize(['admin', 'manager']), orderController.billSingleOrder);
 app.post('/api/orders/:id/request-bill', orderController.requestBill);
+app.post('/api/orders/:id/add-items', authenticate, orderController.addItemsToOrder);
 app.delete('/api/orders/history/clear', authenticate, authorize('admin'), orderController.clearOrderHistory);
+
+// Order Item Cancellation
+app.patch('/api/order-items/:id/cancel', authenticate, orderController.cancelOrderItem);
+
+// Cancellation Log
+app.get('/api/cancellations', authenticate, authorize(['admin', 'manager']), orderController.getCancellationLog);
 
 // KOT
 app.get('/api/kot', authenticate, kotController.getKot);
@@ -155,7 +171,20 @@ app.get('/api/reports/history', authenticate, authorize(['admin', 'manager']), r
 app.get('/api/reports/table/:tableId', authenticate, authorize(['admin', 'manager']), reportController.getActiveReportsByTable);
 app.patch('/api/reports/:id/resolve', authenticate, authorize(['admin', 'manager']), reportController.resolveReport);
 
-// --- AI Service Proxy --- //
+// Staff Roster & Attendance & Overtime
+app.get('/api/staff/attendance/daily', authenticate, authorize(['admin', 'manager']), staffController.getDailyAttendance);
+app.post('/api/staff/attendance/daily', authenticate, authorize(['admin', 'manager']), staffController.markAttendance);
+app.get('/api/staff/overtime', authenticate, authorize(['admin', 'manager']), staffController.getOvertimeRecords);
+app.post('/api/staff/overtime', authenticate, authorize(['admin', 'manager']), staffController.addOvertime);
+app.delete('/api/staff/overtime/:id', authenticate, authorize(['admin', 'manager']), staffController.deleteOvertime);
+app.get('/api/staff/roster/summary', authenticate, authorize(['admin', 'manager']), staffController.getMonthRosterSummary);
+app.get('/api/staff', authenticate, authorize(['admin', 'manager']), staffController.getAllStaff);
+app.post('/api/staff', authenticate, authorize(['admin', 'manager']), staffController.createStaff);
+app.get('/api/staff/:id', authenticate, authorize(['admin', 'manager']), staffController.getStaffById);
+app.put('/api/staff/:id', authenticate, authorize(['admin', 'manager']), staffController.updateStaff);
+app.delete('/api/staff/:id', authenticate, authorize(['admin', 'manager']), staffController.deleteStaff);
+
+// --- AI Service Proxy with Resilient Fallbacks --- //
 const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 const AI_URL = process.env.AI_SERVICE_URL || 'http://127.0.0.1:5000';
 
@@ -170,12 +199,24 @@ app.use('/api/ai', async (req, res) => {
       options.body = JSON.stringify(req.body);
     }
     
-    // dynamically import node-fetch if needed, or use native fetch if node >= 18
     const response = await global.fetch(url, options);
     const data = await response.json();
     res.status(response.status).json(data);
   } catch (error) {
-    res.status(500).json({ success: false, message: 'AI Service unreachable' });
+    // Graceful fallback for offline AI service so ordering & menu NEVER fail
+    if (req.path.includes('trending')) {
+      return res.json({ success: true, trending: [] });
+    }
+    if (req.path.includes('recommendations')) {
+      return res.json({ success: true, recommendations: [] });
+    }
+    if (req.path.includes('frequently-with')) {
+      return res.json({ success: true, suggestions: [] });
+    }
+    if (req.path.includes('peak-hours')) {
+      return res.json({ success: true, hourlyVolume: new Array(24).fill(0) });
+    }
+    res.status(200).json({ success: false, message: 'AI Service offline', data: [] });
   }
 });
 

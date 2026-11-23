@@ -41,21 +41,29 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 const DashboardPage = () => {
   const [stats, setStats] = useState({ totalOrders: 0, revenue: 0, avgOrderValue: 0 });
-  const [peakHours, setPeakHours] = useState([]);
+  const [peakHours, setPeakHours] = useState(() => new Array(24).fill(0));
 
   useEffect(() => {
     const fetchDashboard = async () => {
       try {
         const statsRes = await api.get('/analytics/comprehensive');
-        const todayData = statsRes.data.data.todaySummary;
+        const todayData = statsRes.data?.data?.todaySummary || { totalOrders: 0, revenue: 0 };
         setStats({
-          totalOrders: todayData.totalOrders,
-          revenue: todayData.revenue,
-          avgOrderValue: todayData.totalOrders > 0 ? parseFloat((todayData.revenue / todayData.totalOrders).toFixed(2)) : 0
+          totalOrders: todayData.totalOrders || 0,
+          revenue: todayData.revenue || 0,
+          avgOrderValue: (todayData.totalOrders > 0) ? parseFloat(((todayData.revenue || 0) / todayData.totalOrders).toFixed(2)) : 0
         });
 
-        const peakRes = await api.get('/ai/peak-hours');
-        setPeakHours(peakRes.data.hourlyVolume);
+        try {
+          const peakRes = await api.get('/ai/peak-hours');
+          if (Array.isArray(peakRes.data?.hourlyVolume)) {
+            setPeakHours(peakRes.data.hourlyVolume);
+          } else {
+            setPeakHours(new Array(24).fill(0));
+          }
+        } catch {
+          setPeakHours(new Array(24).fill(0));
+        }
       } catch (err) {
         console.error(err);
       }
@@ -63,9 +71,9 @@ const DashboardPage = () => {
     fetchDashboard();
   }, []);
 
-  const chartData = peakHours.map((vol, hour) => ({
+  const chartData = (Array.isArray(peakHours) ? peakHours : []).map((vol, hour) => ({
     time: `${String(hour).padStart(2, '0')}:00`,
-    Orders: parseFloat(vol.toFixed(1))
+    Orders: typeof vol === 'number' ? parseFloat(vol.toFixed(1)) : 0
   }));
 
   return (

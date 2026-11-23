@@ -23,7 +23,8 @@ const CartPage = () => {
         
         // Fetch full details of suggested items
         const menuRes = await api.get('/menu');
-        const suggested = menuRes.data.data.filter(m => res.data.suggestions.includes(m.id));
+        const suggestions = res.data?.suggestions || [];
+        const suggested = (menuRes.data?.data || []).filter(m => suggestions.includes(m.id));
         setUpsells(suggested);
       } catch (err) {
         console.error('Error fetching upsells:', err);

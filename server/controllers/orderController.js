@@ -11,7 +11,8 @@ const createOrder = (req, res) => {
     customerPhone = '',
     customerAddress = '',
     items = [],
-    notes = ''
+    notes = '',
+    source = 'staff'
   } = req.body;
   // items: [{ menuItemId, quantity, specialNotes, price, costPrice }]
 
@@ -48,8 +49,8 @@ const createOrder = (req, res) => {
       INSERT INTO orders (
         table_id, total_amount, order_number, order_type,
         is_online, online_platform, customer_name, customer_phone,
-        customer_address, session_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        customer_address, session_id, source
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const insertOrderItem = db.prepare(`
@@ -57,9 +58,14 @@ const createOrder = (req, res) => {
       VALUES (?, ?, ?, ?, ?, ?)
     `);
 
+    const insertKotItem = db.prepare(`
+      INSERT OR IGNORE INTO kot_items (kot_id, order_item_id) VALUES (?, ?)
+    `);
+
     const total_amount = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
     let orderId;
+    let kotId;
     db.transaction(() => {
       const orderInfo = insertOrder.run(
         effectiveTableId,
@@ -71,12 +77,14 @@ const createOrder = (req, res) => {
         customerName || (orderType === 'dine_in' ? 'Guest' : ''),
         customerPhone || '',
         customerAddress || '',
-        sessionId
+        sessionId,
+        source
       );
       orderId = orderInfo.lastInsertRowid;
 
+      const orderItemIds = [];
       for (const item of items) {
-        insertOrderItem.run(
+        const oi = insertOrderItem.run(
           orderId,
           item.menuItemId || item.menu_item_id || item.id,
           item.quantity,
@@ -84,18 +92,25 @@ const createOrder = (req, res) => {
           item.costPrice || item.cost_price || 0,
           item.specialNotes || item.special_notes || ''
         );
+        orderItemIds.push(oi.lastInsertRowid);
       }
 
       // Generate KOT
       const kotNumber = kotService.generateKotNumber();
-      db.prepare(`
-        INSERT INTO kot (kot_number, order_id, table_id, status, order_type, online_platform)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `).run(kotNumber, orderId, effectiveTableId, 'received', orderType, onlinePlatform || '');
+      const kotInfo = db.prepare(`
+        INSERT INTO kot (kot_number, order_id, table_id, status, order_type, online_platform, customer_name, customer_phone, customer_address)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(kotNumber, orderId, effectiveTableId, 'received', orderType, onlinePlatform || '', customerName || '', customerPhone || '', customerAddress || '');
+      kotId = kotInfo.lastInsertRowid;
+
+      // Record order_items in kot_items
+      for (const oiId of orderItemIds) {
+        insertKotItem.run(kotId, oiId);
+      }
 
       // Update table occupancy only for dine-in tables
       if (orderType === 'dine_in' && effectiveTableId !== 9991 && effectiveTableId !== 9992) {
-        db.prepare('UPDATE tables SET is_occupied = 1 WHERE id = ?').run(effectiveTableId);
+        db.prepare('UPDATE tables SET is_occupied = 1, status = \'hold\' WHERE id = ?').run(effectiveTableId);
       }
     })();
 
@@ -105,7 +120,7 @@ const createOrder = (req, res) => {
       SELECT oi.id, oi.quantity, oi.special_notes, oi.menu_item_id, m.name, m.is_veg 
       FROM order_items oi 
       JOIN menu_items m ON oi.menu_item_id = m.id 
-      WHERE oi.order_id = ?
+      WHERE oi.order_id = ? AND (oi.is_cancelled = 0 OR oi.is_cancelled IS NULL)
     `).all(orderId);
 
     kot.table_number = effectiveTableNumber;
@@ -121,7 +136,8 @@ const createOrder = (req, res) => {
       req.io.of('/kitchen').to('kitchen:global').emit('kot:new', kot);
       req.io.of('/admin').to('admin:global').emit('kot:new', kot);
       if (orderType === 'dine_in' && effectiveTableId !== 9991 && effectiveTableId !== 9992) {
-        req.io.of('/admin').emit('table:statusChanged', { tableId: effectiveTableId, isOccupied: 1 });
+        req.io.of('/admin').emit('table:statusChanged', { tableId: effectiveTableId, status: 'hold' });
+        req.io.of('/waiter').emit('table:statusChanged', { tableId: effectiveTableId, status: 'hold' });
       }
     }
 
@@ -324,23 +340,24 @@ const generateBill = (req, res) => {
     db.transaction(() => {
       db.prepare("UPDATE orders SET status = 'billed', updated_at = datetime('now') WHERE id = ?").run(id);
       if (order.order_type === 'dine_in' && order.table_id !== 9991 && order.table_id !== 9992) {
-        db.prepare('UPDATE tables SET is_occupied = 0 WHERE id = ?').run(order.table_id);
+        db.prepare('UPDATE tables SET is_occupied = 0, status = \'free\' WHERE id = ?').run(order.table_id);
       }
     })();
 
-      if (req.io && order.order_type === 'dine_in' && order.table_id !== 9991 && order.table_id !== 9992) {
-        req.io.of('/admin').emit('table:statusChanged', { tableId: order.table_id, isOccupied: 0 });
-      }
-
-      res.json({ success: true, message: 'Bill generated successfully' });
-    } catch (error) {
-      res.status(500).json({ success: false, message: error.message });
+    if (req.io && order.order_type === 'dine_in' && order.table_id !== 9991 && order.table_id !== 9992) {
+      req.io.of('/admin').emit('table:statusChanged', { tableId: order.table_id, status: 'free' });
+      req.io.of('/waiter').emit('table:statusChanged', { tableId: order.table_id, status: 'free' });
     }
-  };
 
-  const requestBill = (req, res) => {
-    const { id } = req.params;
-    const order = db.prepare(`
+    res.json({ success: true, message: 'Bill generated successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+const requestBill = (req, res) => {
+  const { id } = req.params;
+  const order = db.prepare(`
     SELECT o.table_id,
       CASE
         WHEN o.order_type = 'takeaway' THEN 'Takeaway'
@@ -351,36 +368,36 @@ const generateBill = (req, res) => {
     LEFT JOIN tables t ON o.table_id = t.id
     WHERE o.id = ?
   `).get(id);
-    if (!order) return res.status(404).json({ success: false });
+  if (!order) return res.status(404).json({ success: false });
 
-    if (req.io) {
-      req.io.of('/admin').emit('notification:bill_request', { tableNumber: order.table_number, tableId: order.table_id, orderId: id });
-    }
-    res.json({ success: true });
-  };
+  if (req.io) {
+    req.io.of('/admin').emit('notification:bill_request', { tableNumber: order.table_number, tableId: order.table_id, orderId: id });
+  }
+  res.json({ success: true });
+};
 
-  const requestBillByTable = (req, res) => {
-    const { tableId } = req.params;
-    const table = db.prepare('SELECT table_number FROM tables WHERE id = ?').get(tableId);
-    if (!table) return res.status(404).json({ success: false });
+const requestBillByTable = (req, res) => {
+  const { tableId } = req.params;
+  const table = db.prepare('SELECT table_number FROM tables WHERE id = ?').get(tableId);
+  if (!table) return res.status(404).json({ success: false });
 
-    if (req.io) {
-      req.io.of('/admin').emit('notification:bill_request', { tableNumber: table.table_number, tableId: parseInt(tableId) });
-    }
-    res.json({ success: true });
-  };
+  if (req.io) {
+    req.io.of('/admin').emit('notification:bill_request', { tableNumber: table.table_number, tableId: parseInt(tableId) });
+  }
+  res.json({ success: true });
+};
 
-  // ── Billing: Get all un-billed orders for a table ─────────────────────────────
-  const getBillingForTable = (req, res) => {
-    const { tableId } = req.params;
-    const parsedTableId = parseInt(tableId);
+// ── Billing: Get all un-billed orders for a table ─────────────────────────────
+const getBillingForTable = (req, res) => {
+  const { tableId } = req.params;
+  const parsedTableId = parseInt(tableId);
 
-    // Find the time of the last billing event for this table
-    const lastBill = db.prepare(`
+  // Find the time of the last billing event for this table
+  const lastBill = db.prepare(`
     SELECT MAX(updated_at) as last_billed
     FROM orders
     WHERE table_id = ? AND status = 'billed'
-    `).get(parsedTableId);
+  `).get(parsedTableId);
 
   let orders;
   if (lastBill && lastBill.last_billed && parsedTableId !== 9991 && parsedTableId !== 9992) {
@@ -390,7 +407,7 @@ const generateBill = (req, res) => {
           WHEN o.order_type = 'takeaway' THEN 'Takeaway'
           WHEN o.order_type = 'delivery' THEN 'Free Home Delivery'
           ELSE COALESCE(t.table_number, 'Table ' || o.table_id)
-    END as table_number,
+      END as table_number,
       k.status as kot_status
       FROM orders o
       LEFT JOIN tables t ON o.table_id = t.id
@@ -412,7 +429,7 @@ const generateBill = (req, res) => {
       LEFT JOIN kot k ON o.id = k.order_id
       WHERE o.table_id = ? AND o.status != 'billed'
       ORDER BY o.placed_at ASC
-  `).all(parsedTableId);
+    `).all(parsedTableId);
   }
 
   // Attach items to each order
@@ -437,26 +454,27 @@ const generateTableBill = (req, res) => {
   try {
     const parsedTableId = parseInt(tableId);
     const dateSlug = new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 14);
-    const sessionId = `SESS - ${ parsedTableId } -${ dateSlug } `;
+    const sessionId = `SESS-${parsedTableId}-${dateSlug}`;
 
     db.transaction(() => {
       db.prepare(`
         UPDATE orders 
         SET status = 'billed',
-    updated_at = datetime('now'),
-    payment_method = ?,
-    session_id = COALESCE(session_id, ?)
+            updated_at = datetime('now'),
+            payment_method = ?,
+            session_id = COALESCE(session_id, ?)
         WHERE table_id = ? AND status != 'billed'
-    `).run(payment_method || 'Cash', sessionId, parsedTableId);
+      `).run(payment_method || 'Cash', sessionId, parsedTableId);
 
       if (parsedTableId !== 9991 && parsedTableId !== 9992) {
-        db.prepare('UPDATE tables SET is_occupied = 0 WHERE id = ?').run(parsedTableId);
+        db.prepare('UPDATE tables SET is_occupied = 0, status = \'free\' WHERE id = ?').run(parsedTableId);
       }
     })();
 
     if (req.io) {
       if (parsedTableId !== 9991 && parsedTableId !== 9992) {
-        req.io.of('/admin').emit('table:statusChanged', { tableId: parsedTableId, isOccupied: 0 });
+        req.io.of('/admin').emit('table:statusChanged', { tableId: parsedTableId, status: 'free' });
+        req.io.of('/waiter').emit('table:statusChanged', { tableId: parsedTableId, status: 'free' });
       }
       req.io.of('/admin').emit('order:billed', { tableId: parsedTableId, sessionId });
     }
@@ -477,29 +495,36 @@ const billSingleOrder = (req, res) => {
     if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
 
     const dateSlug = new Date().toISOString().replace(/[^0-9]/g, '').slice(0, 14);
-    const sessionId = order.session_id || `SESS - ${ order.order_type.toUpperCase() } -${ dateSlug } `;
+    const sessionId = order.session_id || `SESS-${order.order_type.toUpperCase()}-${dateSlug}`;
 
     db.transaction(() => {
       db.prepare(`
         UPDATE orders
         SET status = 'billed',
-    updated_at = datetime('now'),
-    payment_method = ?,
-    session_id = ?
-      WHERE id = ?
-        `).run(payment_method || 'Cash', sessionId, id);
+            updated_at = datetime('now'),
+            payment_method = ?,
+            session_id = ?
+        WHERE id = ?
+      `).run(payment_method || 'Cash', sessionId, id);
 
       if (order.order_type === 'dine_in' && order.table_id !== 9991 && order.table_id !== 9992) {
         // Check if any other active orders exist for this table
         const remaining = db.prepare("SELECT count(*) as count FROM orders WHERE table_id = ? AND status != 'billed'").get(order.table_id);
         if (remaining.count === 0) {
-          db.prepare('UPDATE tables SET is_occupied = 0 WHERE id = ?').run(order.table_id);
+          db.prepare('UPDATE tables SET is_occupied = 0, status = \'free\' WHERE id = ?').run(order.table_id);
         }
       }
     })();
 
     if (req.io) {
       req.io.of('/admin').emit('order:billed', { orderId: id, sessionId });
+      if (order.order_type === 'dine_in' && order.table_id !== 9991 && order.table_id !== 9992) {
+        const remaining = db.prepare("SELECT count(*) as count FROM orders WHERE table_id = ? AND status != 'billed'").get(order.table_id);
+        if (remaining.count === 0) {
+          req.io.of('/admin').emit('table:statusChanged', { tableId: order.table_id, status: 'free' });
+          req.io.of('/waiter').emit('table:statusChanged', { tableId: order.table_id, status: 'free' });
+        }
+      }
     }
 
     res.json({ success: true, sessionId });
@@ -518,8 +543,10 @@ const clearOrderHistory = (req, res) => {
         const placeholders = billedIds.map(() => '?').join(',');
 
         // Delete associated KOTs and Order Items first (to respect foreign keys)
-        db.prepare(`DELETE FROM kot WHERE order_id IN(${ placeholders })`).run(...billedIds);
-        db.prepare(`DELETE FROM order_items WHERE order_id IN(${ placeholders })`).run(...billedIds);
+        db.prepare(`DELETE FROM kot_items WHERE kot_id IN (SELECT id FROM kot WHERE order_id IN(${placeholders}))`).run(...billedIds);
+        db.prepare(`DELETE FROM order_item_cancellations WHERE order_id IN(${placeholders})`).run(...billedIds);
+        db.prepare(`DELETE FROM kot WHERE order_id IN(${placeholders})`).run(...billedIds);
+        db.prepare(`DELETE FROM order_items WHERE order_id IN(${placeholders})`).run(...billedIds);
 
         // Delete the billed orders
         db.prepare("DELETE FROM orders WHERE status = 'billed'").run();
@@ -542,6 +569,12 @@ const clearOrderHistory = (req, res) => {
 const clearKotHistory = (req, res) => {
   try {
     db.transaction(() => {
+      const servedKots = db.prepare("SELECT id FROM kot WHERE status = 'served'").all();
+      if (servedKots.length > 0) {
+        const kotIds = servedKots.map(k => k.id);
+        const placeholders = kotIds.map(() => '?').join(',');
+        db.prepare(`DELETE FROM kot_items WHERE kot_id IN(${placeholders})`).run(...kotIds);
+      }
       db.prepare("DELETE FROM kot WHERE status = 'served'").run();
       const kotCount = db.prepare("SELECT COUNT(*) as count FROM kot").get().count;
       if (kotCount === 0) {
@@ -554,30 +587,30 @@ const clearKotHistory = (req, res) => {
   }
 };
 
-// ── Billing: Get all pending billable targets (occupied tables + unbilled takeaway/delivery)
+// ── Billing: Get all pending billable targets (occupied/hold tables + unbilled takeaway/delivery)
 const getPendingBills = (req, res) => {
   try {
     const tables = db.prepare(`
       SELECT t.id, t.table_number,
-    (SELECT COUNT(*) FROM orders o WHERE o.table_id = t.id AND o.status != 'billed') as order_count,
-      (SELECT COALESCE(SUM(o.total_amount), 0) FROM orders o WHERE o.table_id = t.id AND o.status != 'billed') as total_amount
+        (SELECT COUNT(*) FROM orders o WHERE o.table_id = t.id AND o.status != 'billed') as order_count,
+        (SELECT COALESCE(SUM(o.total_amount), 0) FROM orders o WHERE o.table_id = t.id AND o.status != 'billed') as total_amount
       FROM tables t
-      WHERE t.is_occupied = 1 AND t.id NOT IN(9991, 9992)
+      WHERE t.status IN ('occupied', 'hold') AND t.id NOT IN (9991, 9992)
       ORDER BY t.table_number ASC
     `).all();
 
     const directOrders = db.prepare(`
       SELECT o.*,
-    CASE
+        CASE
           WHEN o.order_type = 'takeaway' THEN 'Takeaway'
           WHEN o.order_type = 'delivery' THEN 'Free Home Delivery'
           ELSE COALESCE(t.table_number, 'Table ' || o.table_id)
-  END as table_number,
-    k.status as kot_status
+        END as table_number,
+        k.status as kot_status
       FROM orders o
       LEFT JOIN tables t ON o.table_id = t.id
       LEFT JOIN kot k ON o.id = k.order_id
-      WHERE o.order_type IN('takeaway', 'delivery') AND o.status != 'billed'
+      WHERE o.order_type IN ('takeaway', 'delivery') AND o.status != 'billed'
       ORDER BY o.placed_at DESC
     `).all();
 
@@ -587,7 +620,7 @@ const getPendingBills = (req, res) => {
         FROM order_items oi
         JOIN menu_items m ON oi.menu_item_id = m.id
         WHERE oi.order_id = ?
-    `).all(ord.id);
+      `).all(ord.id);
     }
 
     res.json({
@@ -597,6 +630,198 @@ const getPendingBills = (req, res) => {
         directOrders
       }
     });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// ── Add items to existing order (incremental KOT) ────────────────────────────
+const addItemsToOrder = (req, res) => {
+  const { id } = req.params;
+  const { items = [] } = req.body;
+
+  if (!items.length) {
+    return res.status(400).json({ success: false, message: 'No items provided.' });
+  }
+
+  try {
+    const order = db.prepare(`
+      SELECT o.*,
+        COALESCE(t.table_number, 'Table ' || o.table_id) as table_number
+      FROM orders o
+      LEFT JOIN tables t ON o.table_id = t.id
+      WHERE o.id = ?
+    `).get(id);
+
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found.' });
+    if (order.status === 'billed') {
+      return res.status(409).json({ success: false, message: 'Cannot add items to a billed order.' });
+    }
+
+    const insertOrderItem = db.prepare(`
+      INSERT INTO order_items (order_id, menu_item_id, quantity, price, cost_price, special_notes)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `);
+    const insertKotItem = db.prepare(`
+      INSERT OR IGNORE INTO kot_items (kot_id, order_item_id) VALUES (?, ?)
+    `);
+
+    const addedAmount = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+    let kotId;
+    let kotNumber;
+    const newOrderItemIds = [];
+
+    db.transaction(() => {
+      // Insert new order items
+      for (const item of items) {
+        const oi = insertOrderItem.run(
+          id,
+          item.menuItemId || item.menu_item_id,
+          item.quantity,
+          item.price,
+          item.costPrice || item.cost_price || 0,
+          item.specialNotes || item.special_notes || ''
+        );
+        newOrderItemIds.push(oi.lastInsertRowid);
+      }
+
+      // Update order total
+      db.prepare("UPDATE orders SET total_amount = total_amount + ?, updated_at = datetime('now') WHERE id = ?").run(addedAmount, id);
+
+      // Create a new KOT for only the new items
+      kotNumber = kotService.generateKotNumber();
+      const kotInfo = db.prepare(`
+        INSERT INTO kot (kot_number, order_id, table_id, status, order_type, online_platform, customer_name, customer_phone, customer_address)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(kotNumber, id, order.table_id, 'received', order.order_type, order.online_platform || '', order.customer_name || '', order.customer_phone || '', order.customer_address || '');
+      kotId = kotInfo.lastInsertRowid;
+
+      // Record only new items in kot_items
+      for (const oiId of newOrderItemIds) {
+        insertKotItem.run(kotId, oiId);
+      }
+    })();
+
+    // Fetch the new KOT to emit
+    const kot = db.prepare('SELECT * FROM kot WHERE id = ?').get(kotId);
+    kot.items = db.prepare(`
+      SELECT oi.id, oi.quantity, oi.special_notes, oi.menu_item_id, m.name, m.is_veg
+      FROM order_items oi
+      JOIN menu_items m ON oi.menu_item_id = m.id
+      WHERE oi.id IN (${newOrderItemIds.map(() => '?').join(',')})
+    `).all(...newOrderItemIds);
+    kot.table_number = order.table_number;
+    kot.tableNumber = order.table_number;
+
+    if (req.io) {
+      req.io.of('/kitchen').to('kitchen:global').emit('kot:new', kot);
+      req.io.of('/admin').to('admin:global').emit('kot:new', kot);
+    }
+
+    res.json({ success: true, data: { kotId, kotNumber } });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// ── Cancel order item ─────────────────────────────────────────────────────────
+const cancelOrderItem = (req, res) => {
+  const { id } = req.params;
+  const { reason, cancelledById, cancelledByRole, cancelledByName = '' } = req.body;
+
+  if (!reason) return res.status(400).json({ success: false, message: 'reason is required.' });
+
+  try {
+    const orderItem = db.prepare(`
+      SELECT oi.*, m.name as menu_item_name
+      FROM order_items oi
+      JOIN menu_items m ON oi.menu_item_id = m.id
+      WHERE oi.id = ?
+    `).get(id);
+
+    if (!orderItem) return res.status(404).json({ success: false, message: 'Order item not found.' });
+    if (orderItem.is_cancelled) return res.status(409).json({ success: false, message: 'Item is already cancelled.' });
+
+    db.transaction(() => {
+      db.prepare(`
+        UPDATE order_items
+        SET is_cancelled = 1,
+            cancelled_at = datetime('now'),
+            cancelled_reason = ?,
+            cancelled_by_id = ?,
+            cancelled_by_role = ?
+        WHERE id = ?
+      `).run(reason, cancelledById || null, cancelledByRole || null, id);
+
+      db.prepare(`
+        INSERT INTO order_item_cancellations
+          (order_id, order_item_id, menu_item_name, quantity, reason, cancelled_by_id, cancelled_by_name, cancelled_by_role)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        orderItem.order_id,
+        orderItem.id,
+        orderItem.menu_item_name,
+        orderItem.quantity,
+        reason,
+        cancelledById || 0,
+        cancelledByName,
+        cancelledByRole || ''
+      );
+    })();
+
+    if (req.io) {
+      req.io.of('/admin').emit('order:itemCancelled', {
+        orderItemId: parseInt(id),
+        orderId: orderItem.order_id,
+        reason
+      });
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// ── Cancellation log ──────────────────────────────────────────────────────────
+const getCancellationLog = (req, res) => {
+  const { start, end, tableId, cancelledById } = req.query;
+
+  let query = `
+    SELECT c.*,
+      o.order_number,
+      o.table_id,
+      COALESCE(t.table_number, 'Table ' || o.table_id) as table_number
+    FROM order_item_cancellations c
+    JOIN orders o ON c.order_id = o.id
+    LEFT JOIN tables t ON o.table_id = t.id
+    WHERE 1=1
+  `;
+  const params = [];
+
+  if (start) {
+    query += ` AND c.cancelled_at >= ?`;
+    params.push(start);
+  }
+  if (end) {
+    query += ` AND c.cancelled_at < datetime(?, '+1 day')`;
+    params.push(end);
+  }
+  if (tableId) {
+    query += ` AND o.table_id = ?`;
+    params.push(parseInt(tableId));
+  }
+  if (cancelledById) {
+    query += ` AND c.cancelled_by_id = ?`;
+    params.push(parseInt(cancelledById));
+  }
+
+  query += ` ORDER BY c.cancelled_at DESC LIMIT 200`;
+
+  try {
+    const rows = db.prepare(query).all(...params);
+    res.json({ success: true, data: rows });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -617,4 +842,7 @@ module.exports = {
   getPendingBills,
   clearOrderHistory,
   clearKotHistory,
+  addItemsToOrder,
+  cancelOrderItem,
+  getCancellationLog,
 };

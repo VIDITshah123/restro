@@ -9,6 +9,7 @@ import AdminLogin from './pages/admin/AdminLogin';
 import AdminLayout from './pages/admin/AdminLayout';
 import DashboardPage from './pages/admin/DashboardPage';
 import OrdersPage from './pages/admin/OrdersPage';
+import ActiveOrdersPage from './pages/admin/ActiveOrdersPage';
 import MenuManagementPage from './pages/admin/MenuManagementPage';
 import TablesPage from './pages/admin/TablesPage';
 import AnalyticsPage from './pages/admin/AnalyticsPage';
@@ -21,7 +22,9 @@ import WaiterLogin from './pages/waiter/WaiterLogin';
 
 import BillingPage from './pages/admin/BillingPage';
 import WaitersPage from './pages/admin/WaitersPage';
+import StaffRosterPage from './pages/admin/StaffRosterPage';
 import ReportsPage from './pages/admin/ReportsPage';
+import CancellationLogPage from './pages/admin/CancellationLogPage';
 
 const ProtectedRoute = ({ children, roles }) => {
   const { token, role } = useAuthStore();
@@ -48,13 +51,16 @@ function App() {
         }>
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="orders" element={<OrdersPage />} />
+          <Route path="active-orders" element={<ActiveOrdersPage />} />
           <Route path="billing" element={<BillingPage />} />
           <Route path="menu" element={<MenuManagementPage />} />
           <Route path="tables" element={<TablesPage />} />
+          <Route path="staff-roster" element={<StaffRosterPage />} />
           <Route path="waiters" element={<WaitersPage />} />
           <Route path="analytics" element={<AnalyticsPage />} />
           <Route path="kot-history" element={<KOTHistory />} />
           <Route path="reports" element={<ReportsPage />} />
+          <Route path="cancellations" element={<CancellationLogPage />} />
         </Route>
 
         {/* Kitchen Portal */}

@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../store';
-import { LayoutDashboard, ListOrdered, MenuSquare, Grid, BarChart3, History, LogOut, Receipt, Users, Bell, Flag } from 'lucide-react';
+import { LayoutDashboard, ListOrdered, Utensils, MenuSquare, Grid, BarChart3, History, LogOut, Receipt, Users, Bell, Flag, XCircle, CalendarDays } from 'lucide-react';
 import { io } from 'socket.io-client';
 import api from '../../api';
 
@@ -176,13 +176,16 @@ const AdminLayout = () => {
   const navItems = [
     { name: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
     { name: 'Orders', path: '/admin/orders', icon: ListOrdered },
+    { name: 'Active Orders', path: '/admin/active-orders', icon: Utensils },
     { name: 'Billing', path: '/admin/billing', icon: Receipt },
     { name: 'Menu', path: '/admin/menu', icon: MenuSquare },
     { name: 'Tables', path: '/admin/tables', icon: Grid },
+    { name: 'Staff Roster', path: '/admin/staff-roster', icon: CalendarDays },
     { name: 'Waiters', path: '/admin/waiters', icon: Users },
     { name: 'Analytics', path: '/admin/analytics', icon: BarChart3 },
     { name: 'KOT History', path: '/admin/kot-history', icon: History },
     { name: 'Reports', path: '/admin/reports', icon: Flag },
+    { name: 'Cancellations', path: '/admin/cancellations', icon: XCircle },
   ];
 
   return (

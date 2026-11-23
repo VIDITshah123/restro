@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useKOTSocket } from '../../hooks/useSocket';
 import api from '../../api';
+import { io } from 'socket.io-client';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Clock, ChefHat, CheckCircle2, History, ShoppingBag, Bike, Globe } from 'lucide-react';
+import { Clock, ChefHat, CheckCircle2, History, ShoppingBag, Bike, Globe, XCircle } from 'lucide-react';
 
 const STATUS_CONFIG = {
   received: {
@@ -50,7 +51,9 @@ const KOTCard = ({ kot, onStatusUpdate }) => {
     try {
       await api.patch(`/kot/${kot.id}/status`, { status });
       onStatusUpdate(kot.id, status);
-    } catch { alert('Error updating status'); }
+    } catch {
+      alert('Error updating status');
+    }
   };
 
   const cfg = STATUS_CONFIG[kot.status] || STATUS_CONFIG.received;
@@ -58,8 +61,11 @@ const KOTCard = ({ kot, onStatusUpdate }) => {
 
   const isTakeaway = kot.order_type === 'takeaway' || kot.table_number === 'Takeaway';
   const isDelivery = kot.order_type === 'delivery' || kot.table_number === 'Free Home Delivery';
-
-  const resolvedTableLabel = isTakeaway ? 'Takeaway' : isDelivery ? 'Free Home Delivery' : (kot.table_number || kot.tableNumber || '—');
+  const resolvedTableLabel = isTakeaway
+    ? 'Takeaway'
+    : isDelivery
+    ? 'Free Home Delivery'
+    : kot.table_number || kot.tableNumber || '—';
 
   return (
     <motion.div
@@ -83,242 +89,290 @@ const KOTCard = ({ kot, onStatusUpdate }) => {
 
       {/* Header */}
       <div className="flex justify-between items-start px-4 pt-4 pb-3 border-b border-white/5">
-          <div className="flex-1 min-w-0 pr-2">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="text-lg font-black text-amber-500 font-mono tracking-tight">{kot.kot_number}</h2>
-              {isTakeaway && (
-                <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-purple-500/20 text-purple-300 border border-purple-500/30 flex items-center gap-1">
-                  <ShoppingBag size={10} /> Takeaway
-                </span>
-              )}
-              {isDelivery && (
-                <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-orange-500/20 text-orange-300 border border-orange-500/30 flex items-center gap-1">
-                  <Bike size={10} /> Free Delivery
-                </span>
-              )}
-            </div>
-
-            <p className="text-gray-100 font-bold text-base mt-0.5 flex items-center gap-1">
-              {resolvedTableLabel}
-            </p>
-
-            {kot.online_platform && (
-              <span className="inline-flex items-center gap-1 text-[11px] text-blue-400 font-bold mt-0.5">
-                <Globe size={11} /> {kot.online_platform}
+        <div className="flex-1 min-w-0 pr-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h2 className="text-lg font-black text-amber-500 font-mono tracking-tight">{kot.kot_number}</h2>
+            {isTakeaway && (
+              <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-purple-500/20 text-purple-300 border border-purple-500/30 flex items-center gap-1">
+                <ShoppingBag size={10} /> Takeaway
               </span>
             )}
-
-            {kot.customer_name && (
-              <span className="text-[11px] text-gray-400 block mt-0.5 truncate">
-                👤 {kot.customer_name} {kot.customer_phone ? `(${kot.customer_phone})` : ''}
-              </span>
-            )}
-
-            {kot.customer_address && (
-              <span className="text-[10px] text-amber-400/80 block mt-0.5 truncate">
-                📍 {kot.customer_address}
+            {isDelivery && (
+              <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-orange-500/20 text-orange-300 border border-orange-500/30 flex items-center gap-1">
+                <Bike size={10} /> Free Delivery
               </span>
             )}
           </div>
 
-            <div className="text-right shrink-0">
-              <div className={`flex items-center gap-1.5 justify-end ${isUrgent ? 'text-red-400' : 'text-gray-600'}`}>
-                <Clock size={12} />
-                <span className="font-mono text-xs font-bold">{elapsed}m ago</span>
-              </div>
-              <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${cfg.badge}`}>
-                {kot.status}
-              </span>
-            </div>
+          <p className="text-gray-100 font-bold text-base mt-0.5">{resolvedTableLabel}</p>
+
+          {kot.online_platform && (
+            <span className="inline-flex items-center gap-1 text-[11px] text-blue-400 font-bold mt-0.5">
+              <Globe size={11} /> {kot.online_platform}
+            </span>
+          )}
+
+          {kot.customer_name && (
+            <span className="text-[11px] text-gray-400 block mt-0.5 truncate">
+              👤 {kot.customer_name} {kot.customer_phone ? `(${kot.customer_phone})` : ''}
+            </span>
+          )}
+
+          {kot.customer_address && (
+            <span className="text-[10px] text-amber-400/80 block mt-0.5 truncate">
+              📍 {kot.customer_address}
+            </span>
+          )}
+        </div>
+
+        <div className="text-right shrink-0">
+          <div className={`flex items-center gap-1.5 justify-end ${isUrgent ? 'text-red-400' : 'text-gray-600'}`}>
+            <Clock size={12} />
+            <span className="font-mono text-xs font-bold">{elapsed}m ago</span>
           </div>
+          <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${cfg.badge}`}>
+            {kot.status}
+          </span>
+        </div>
+      </div>
 
-          {/* Items */}
-          <div className="flex-1 px-4 py-3 space-y-3 overflow-y-auto max-h-72">
-            {kot.items.map((item, idx) => {
-              const notesLower = (item.special_notes || '').toLowerCase();
-              const isHalfJain = notesLower.includes('half jain');
-              const isJain = !isHalfJain && notesLower.includes('jain');
-              const isCombo = item.category === 'Combo Meals' || (item.description || '').includes('- ');
+      {/* Items */}
+      <div className="flex-1 px-4 py-3 space-y-3 overflow-y-auto max-h-72">
+        {kot.items.map((item, idx) => {
+          const notesLower = (item.special_notes || '').toLowerCase();
+          const isCancelled = item.is_cancelled === 1 || item.is_cancelled === true;
+          const isHalfJain = notesLower.includes('half jain');
+          const isJain = !isHalfJain && notesLower.includes('jain');
+          const isCombo = item.category === 'Combo Meals' || (item.description || '').includes('- ');
 
-              // Parse combo sub-items from description (lines starting with "- ")
-              const subItems = isCombo
-                ? (item.description || '')
-                  .split('\n')
-                  .map(l => l.trim())
-                  .filter(l => l.startsWith('- '))
-                  .map(l => l.slice(2).trim())
-                : [];
+          const subItems = isCombo
+            ? (item.description || '')
+                .split('\n')
+                .map((l) => l.trim())
+                .filter((l) => l.startsWith('- '))
+                .map((l) => l.slice(2).trim())
+            : [];
 
-              return (
-                <div key={idx} className={`${isCombo ? 'bg-amber-500/5 border border-amber-500/10 rounded-xl p-2.5' : ''}`}>
-                  <div className="flex gap-3 items-start">
-                      <span className="font-black text-amber-500 text-base min-w-[2rem] font-mono">{item.quantity}×</span>
-                      <div className="flex-1 min-w-0">
-                        <p className={`font-bold text-base leading-tight ${isHalfJain ? 'text-yellow-300' : isJain ? 'text-red-300' : 'text-gray-200'
-                          }`}>
-                          {item.name}
-                          {isCombo && (
+          return (
+            <div
+              key={idx}
+              className={`${isCancelled ? 'opacity-50' : ''} ${isCombo ? 'bg-amber-500/5 border border-amber-500/10 rounded-xl p-2.5' : ''}`}
+            >
+              <div className="flex gap-3 items-start">
+                <span
+                  className={`font-black text-base min-w-[2rem] font-mono ${
+                    isCancelled ? 'line-through text-red-400/60' : 'text-amber-500'
+                  }`}
+                >
+                  {item.quantity}×
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p
+                    className={`font-bold text-base leading-tight ${
+                      isCancelled
+                        ? 'line-through text-red-400/60'
+                        : isHalfJain
+                        ? 'text-yellow-300'
+                        : isJain
+                        ? 'text-red-300'
+                        : 'text-gray-200'
+                    }`}
+                  >
+                    {item.name}
+                    {isCombo && (
                       <span className="ml-2 text-[10px] bg-amber-500/20 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-full font-black uppercase tracking-wider">
                         Combo
                       </span>
-                          )}
-                        </p>
+                    )}
+                  </p>
 
-                        {/* Special Notes */}
-                        {item.special_notes && (
-                          <div className="mt-1 flex items-center gap-1.5">
-                            <span className={`text-xs px-2 py-0.5 rounded font-black uppercase tracking-wider ${isHalfJain
-                                ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/40'
-                                : isJain
-                                  ? 'bg-red-500/20 text-red-300 border border-red-500/40'
-                                  : 'bg-white/5 text-amber-400/80 border border-white/10'
-                              }`}>
-                              📝 {item.special_notes}
-                            </span>
-                          </div>
-                        )}
-
-                        {/* Combo sub-items */}
-                        {subItems.length > 0 && (
-                                <div className="mt-2 pl-3 border-l-2 border-amber-500/30 space-y-1">
-                                  {subItems.map((sub, sIdx) => (
-                                    <p key={sIdx} className="text-xs text-amber-200/70 font-medium">
-                                      › {sub}
-                                    </p>
-                                  ))}
-                                </div>
+                  {/* Cancelled badge */}
+                  {isCancelled && (
+                    <span className="mt-1 flex items-center gap-1 w-fit px-2 py-0.5 bg-red-500/20 border border-red-500/40 text-red-400 text-[10px] font-black uppercase tracking-wider rounded-full">
+                      <XCircle size={9} /> Cancelled
+                    </span>
                   )}
-                              </div>
+
+                  {/* Special Notes */}
+                  {item.special_notes && !isCancelled && (
+                    <div className="mt-1 flex items-center gap-1.5">
+                      <span
+                        className={`text-xs px-2 py-0.5 rounded font-black uppercase tracking-wider ${
+                          isHalfJain
+                            ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/40'
+                            : isJain
+                            ? 'bg-red-500/20 text-red-300 border border-red-500/40'
+                            : 'bg-white/5 text-amber-400/80 border border-white/10'
+                        }`}
+                      >
+                        📝 {item.special_notes}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Combo sub-items */}
+                  {subItems.length > 0 && !isCancelled && (
+                    <div className="mt-2 pl-3 border-l-2 border-amber-500/30 space-y-1">
+                      {subItems.map((sub, sIdx) => (
+                        <p key={sIdx} className="text-xs text-amber-200/70 font-medium">
+                          › {sub}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-                      );
+          );
         })}
-                    </div>
+      </div>
 
-                      {/* Actions */}
-                      <div className="p-3 bg-[#141414] border-t border-white/5 flex gap-2">
-                        {kot.status === 'received' && (
-                            <button
-                              onClick={() => handleUpdate('accepted')}
-                              className="flex-1 py-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/20 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
-                            >
-                              Accept
-                            </button>
+      {/* Actions */}
+      <div className="p-3 bg-[#141414] border-t border-white/5 flex gap-2">
+        {kot.status === 'received' && (
+          <button
+            onClick={() => handleUpdate('accepted')}
+            className="flex-1 py-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/20 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
+          >
+            Accept
+          </button>
         )}
-                            {kot.status === 'accepted' && (
-                                <button
-                                  onClick={() => handleUpdate('preparing')}
-                                  className="flex-1 py-2 bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 border border-orange-500/20 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
-                                >
-                                  Start Preparing
-                                </button>
+        {kot.status === 'accepted' && (
+          <button
+            onClick={() => handleUpdate('preparing')}
+            className="flex-1 py-2 bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 border border-orange-500/20 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
+          >
+            Start Preparing
+          </button>
         )}
-                                {kot.status === 'preparing' && (
-                                    <button
-                                      onClick={() => handleUpdate('ready')}
-                                      className="flex-1 py-2 bg-green-500/10 hover:bg-green-500/20 text-green-400 border border-green-500/20 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
-                                    >
-                                      Mark Ready
-                                    </button>
+        {kot.status === 'preparing' && (
+          <button
+            onClick={() => handleUpdate('ready')}
+            className="flex-1 py-2 bg-green-500/10 hover:bg-green-500/20 text-green-400 border border-green-500/20 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
+          >
+            Mark Ready
+          </button>
         )}
-                                    {kot.status === 'ready' && (
-                                        <button
-                                          onClick={() => handleUpdate('served')}
-                                          className="flex-1 py-2 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/20 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer flex items-center justify-center gap-1.5"
-                                        >
-                                          <CheckCircle2 size={13} /> Completed / Served
-                                        </button>
+        {kot.status === 'ready' && (
+          <button
+            onClick={() => handleUpdate('served')}
+            className="flex-1 py-2 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/20 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+          >
+            <CheckCircle2 size={13} /> Completed / Served
+          </button>
         )}
-                                      </div>
+      </div>
     </motion.div>
-                                );
+  );
 };
 
 const KOTBoard = () => {
   const [kots, setKots] = useState([]);
-                                const [filter, setFilter] = useState('all');
+  const [filter, setFilter] = useState('all');
 
   const fetchKots = async () => {
     try {
       const res = await api.get('/kot');
-                                setKots(res.data.data);
+      setKots(res.data.data);
     } catch { }
   };
 
   useEffect(() => {
-                                fetchKots();
+    fetchKots();
   }, []);
 
   const playChime = () => {
-                                try {
+    try {
       const AudioContext = window.AudioContext || window.webkitAudioContext;
-                                if (!AudioContext) return;
-                                const ctx = new AudioContext();
-                                const osc = ctx.createOscillator();
-                                const gain = ctx.createGain();
-                                osc.connect(gain);
-                                gain.connect(ctx.destination);
-                                osc.type = 'sine';
-                                osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
-                                gain.gain.setValueAtTime(0.3, ctx.currentTime);
-                                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
-                                osc.start(ctx.currentTime);
-                                osc.stop(ctx.currentTime + 0.8);
+      if (!AudioContext) return;
+      const ctx = new AudioContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.8);
     } catch { }
   };
 
-                                useKOTSocket(
-    (newKot) => {setKots(prev => [...prev, newKot]); playChime(); },
+  useKOTSocket(
+    (newKot) => { setKots((prev) => [...prev, newKot]); playChime(); },
     (update) => {
-                                  setKots(prev => update.newStatus === 'served'
-                                    ? prev.filter(k => k.id !== update.kotId)
-                                    : prev.map(k => k.id === update.kotId ? { ...k, status: update.newStatus } : k)
-                                  );
+      setKots((prev) =>
+        update.newStatus === 'served'
+          ? prev.filter((k) => k.id !== update.kotId)
+          : prev.map((k) => k.id === update.kotId ? { ...k, status: update.newStatus } : k)
+      );
     }
-                                );
+  );
+
+  // Listen for item cancellations from admin/waiter
+  useEffect(() => {
+    const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+    const socket = io(`${SOCKET_URL}/admin`);
+    socket.on('order:itemCancelled', ({ orderItemId, orderId }) => {
+      setKots((prev) =>
+        prev.map((k) => {
+          if (k.order_id !== orderId) return k;
+          return {
+            ...k,
+            items: k.items.map((item) =>
+              item.id === orderItemId ? { ...item, is_cancelled: 1 } : item
+            ),
+          };
+        })
+      );
+    });
+    return () => socket.disconnect();
+  }, []);
 
   const handleStatusUpdateLocally = (id, status) => {
-                                  setKots(prev => status === 'served'
-                                    ? prev.filter(k => k.id !== id)
-                                    : prev.map(k => k.id === id ? { ...k, status } : k)
-                                  );
+    setKots((prev) =>
+      status === 'served'
+        ? prev.filter((k) => k.id !== id)
+        : prev.map((k) => k.id === id ? { ...k, status } : k)
+    );
   };
 
-                                const FILTERS = ['all', 'received', 'accepted', 'preparing', 'ready'];
+  const FILTERS = ['all', 'received', 'accepted', 'preparing', 'ready'];
   const COUNTS = FILTERS.reduce((acc, f) => {
-                                  acc[f] = f === 'all' ? kots.length : kots.filter(k => k.status === f).length;
-                                return acc;
-  }, { });
-  const visibleKots = filter === 'all' ? kots : kots.filter(k => k.status === filter);
+    acc[f] = f === 'all' ? kots.length : kots.filter((k) => k.status === f).length;
+    return acc;
+  }, {});
+  const visibleKots = filter === 'all' ? kots : kots.filter((k) => k.status === filter);
 
-                                return (
-                                <div className="min-h-screen bg-[#0a0a0a] text-gray-200">
-                                  {/* Top Bar */}
-                                  <div className="sticky top-0 z-10 bg-[#0a0a0a]/90 backdrop-blur-xl border-b border-white/5 px-6 py-4">
-                                    <div className="flex justify-between items-center flex-wrap gap-4">
-                                      <div className="flex items-center gap-3">
-                                        <ChefHat size={28} className="text-amber-500" />
-                                        <div>
-                                          <h1 className="text-2xl font-serif font-black bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-600 bg-clip-text text-transparent tracking-tight leading-tight">
-                                            Kitchen Display
-                                          </h1>
-                                          <p className="text-gray-600 text-xs uppercase tracking-widest">{kots.length} active KOTs</p>
-                                        </div>
-                                      </div>
-                                      <div className="flex items-center gap-2 flex-wrap">
-                                        {FILTERS.map(f => (
-                                          <button
-                                            key={f}
-                                            onClick={() => setFilter(f)}
-                                            className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider border transition-all cursor-pointer ${
-                                              filter === f
-                                                ? 'bg-amber-500/20 border-amber-500/40 text-amber-400'
-                                                : 'bg-white/5 border-white/10 text-gray-500 hover:text-gray-300 hover:border-white/20'
-                                            }`}
-                                          >
-                                            {f} {COUNTS[f] > 0 && <span className="ml-1 opacity-70">({COUNTS[f]})</span>}
-                                          </button>
-                                        ))}
+  return (
+    <div className="min-h-screen bg-[#0a0a0a] text-gray-200">
+      {/* Top Bar */}
+      <div className="sticky top-0 z-10 bg-[#0a0a0a]/90 backdrop-blur-xl border-b border-white/5 px-6 py-4">
+        <div className="flex justify-between items-center flex-wrap gap-4">
+          <div className="flex items-center gap-3">
+            <ChefHat size={28} className="text-amber-500" />
+            <div>
+              <h1 className="text-2xl font-serif font-black bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-600 bg-clip-text text-transparent tracking-tight leading-tight">
+                Kitchen Display
+              </h1>
+              <p className="text-gray-600 text-xs uppercase tracking-widest">{kots.length} active KOTs</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            {FILTERS.map((f) => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider border transition-all cursor-pointer ${
+                  filter === f
+                    ? 'bg-amber-500/20 border-amber-500/40 text-amber-400'
+                    : 'bg-white/5 border-white/10 text-gray-500 hover:text-gray-300 hover:border-white/20'
+                }`}
+              >
+                {f} {COUNTS[f] > 0 && <span className="ml-1 opacity-70">({COUNTS[f]})</span>}
+              </button>
+            ))}
             <a
               href="/kitchen/history"
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider bg-white/5 border border-white/10 text-gray-500 hover:text-amber-400 hover:border-amber-500/20 transition-all cursor-pointer"
@@ -333,13 +387,14 @@ const KOTBoard = () => {
       <div className="p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 auto-rows-max">
           <AnimatePresence>
-            {visibleKots.map(kot => (
+            {visibleKots.map((kot) => (
               <KOTCard key={kot.id} kot={kot} onStatusUpdate={handleStatusUpdateLocally} />
             ))}
           </AnimatePresence>
           {visibleKots.length === 0 && (
             <motion.div
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
               className="col-span-full py-24 text-center"
             >
               <ChefHat size={48} className="mx-auto mb-4 text-gray-800" strokeWidth={1} />

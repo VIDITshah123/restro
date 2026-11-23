@@ -8,7 +8,7 @@ import {
 
 const ONLINE_PLATFORMS = ['Zomato', 'Swiggy', 'MagicPin', 'Uber Eats', 'Direct Website', 'Other'];
 
-const PlaceOrderModal = ({ isOpen, onClose, onOrderPlaced, defaultOrderType = 'takeaway' }) => {
+const PlaceOrderModal = ({ isOpen, onClose, onOrderPlaced, defaultOrderType = 'takeaway', preselectedTableId = null }) => {
   const [orderType, setOrderType] = useState(defaultOrderType); // 'dine_in' | 'takeaway' | 'delivery'
   const [tables, setTables] = useState([]);
   const [selectedTableId, setSelectedTableId] = useState('');
@@ -47,24 +47,29 @@ const PlaceOrderModal = ({ isOpen, onClose, onOrderPlaced, defaultOrderType = 't
       setMenuItems(menuRes.data.data || []);
       setCategories(catRes.data.data || []);
 
-      // If dine-in, pick first available table
-      const firstFree = (tablesRes.data.data || []).find(t => !t.is_occupied);
-      if (firstFree) setSelectedTableId(firstFree.id);
-      else if (tablesRes.data.data?.length > 0) setSelectedTableId(tablesRes.data.data[0].id);
+      // If dine-in, pick first available table or use preselected
+      if (preselectedTableId) {
+        setSelectedTableId(preselectedTableId);
+      } else {
+        const firstFree = (tablesRes.data.data || []).find(t => t.status === 'free' || !t.is_occupied);
+        if (firstFree) setSelectedTableId(firstFree.id);
+        else if (tablesRes.data.data?.length > 0) setSelectedTableId(tablesRes.data.data[0].id);
+      }
     } catch (err) {
       console.error('Failed to load menu or tables:', err);
       setErrorMsg('Failed to load menu or tables data.');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [preselectedTableId]);
 
   useEffect(() => {
     if (isOpen) {
-      setOrderType(defaultOrderType);
+      // If a specific table was preselected, force dine_in; otherwise use defaultOrderType
+      setOrderType(preselectedTableId ? 'dine_in' : defaultOrderType);
       fetchInitialData();
     }
-  }, [isOpen, defaultOrderType, fetchInitialData]);
+  }, [isOpen, defaultOrderType, preselectedTableId, fetchInitialData]);
 
   const filteredMenuItems = useMemo(() => {
     return menuItems.filter(item => {
@@ -405,11 +410,20 @@ const PlaceOrderModal = ({ isOpen, onClose, onOrderPlaced, defaultOrderType = 't
                         onChange={e => setSelectedTableId(e.target.value)}
                         className="w-full bg-[#161616] border border-white/10 rounded-xl px-3.5 py-2.5 text-sm text-gray-200 outline-none focus:border-amber-500/50"
                       >
-                        {tables.map(t => (
-                          <option key={t.id} value={t.id}>
-                            {t.table_number} {t.is_occupied ? '(Occupied)' : '(Free)'}
-                          </option>
-                        ))}
+                        {tables.map(t => {
+                          const statusLabel = t.status === 'free'
+                            ? '(Free)'
+                            : t.status === 'hold'
+                              ? '(On Hold - Active Order)'
+                              : t.status === 'occupied'
+                                ? '(Occupied - Guest Seated)'
+                                : t.is_occupied ? '(Occupied - Guest Seated)' : '(Free)';
+                          return (
+                            <option key={t.id} value={t.id}>
+                              {t.table_number} {statusLabel}
+                            </option>
+                          );
+                        })}
                       </select>
                     </div>
                   )}
@@ -577,7 +591,11 @@ const PlaceOrderModal = ({ isOpen, onClose, onOrderPlaced, defaultOrderType = 't
                     {submitting ? 'Placing Order...' : (
                       <>
                         <Check size={16} strokeWidth={2.5} />
-                        Place {orderType === 'takeaway' ? 'Takeaway' : orderType === 'delivery' ? 'Delivery' : 'Dine-In'} Order
+                        {orderType === 'dine_in'
+                          ? 'Place Order & Hold Table'
+                          : orderType === 'takeaway'
+                            ? 'Place Takeaway Order'
+                            : 'Place Delivery Order'}
                       </>
                     )}
                   </button>
