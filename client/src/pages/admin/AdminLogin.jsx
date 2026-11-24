@@ -126,7 +126,7 @@ const AdminLogin = () => {
                   required
                   value={email}
                   onChange={e => setEmail(e.target.value)}
-                  placeholder="admin@cafefillo.com"
+                  placeholder="shahvidit15@gmail.com / admin@restro.com"
                   className="w-full pl-11 pr-4 py-3 bg-white/5 border border-white/10 rounded-xl text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-amber-500/50 focus:border-amber-500/50 transition-all placeholder:text-gray-600"
                 />
               </div>

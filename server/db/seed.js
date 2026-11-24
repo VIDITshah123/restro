@@ -4,12 +4,15 @@ const bcrypt = require('bcrypt');
 const seed = async () => {
   console.log('Seeding database...');
   
-  // 1. Seed Admin
-  const adminCheck = db.prepare('SELECT id FROM admins WHERE email = ?').get('admin@restro.com');
-  if (!adminCheck) {
-    const hash = await bcrypt.hash('admin123', 10);
-    db.prepare('INSERT INTO admins (email, password_hash, role) VALUES (?, ?, ?)').run('admin@restro.com', hash, 'admin');
-    console.log('Admin user seeded.');
+  // 1. Seed Admins
+  const defaultAdmins = ['admin@restro.com', 'shahvidit15@gmail.com'];
+  const hash = await bcrypt.hash('admin123', 10);
+  for (const adminEmail of defaultAdmins) {
+    const adminCheck = db.prepare('SELECT id FROM admins WHERE LOWER(email) = LOWER(?)').get(adminEmail);
+    if (!adminCheck) {
+      db.prepare('INSERT INTO admins (email, password_hash, role) VALUES (?, ?, ?)').run(adminEmail, hash, 'admin');
+      console.log(`Admin user seeded: ${adminEmail}`);
+    }
   }
 
   // 2. Seed Tables

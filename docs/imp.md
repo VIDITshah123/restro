@@ -1,5 +1,6 @@
-admin@restro.com
-admin123
+# Admin Login Credentials
+- Primary Admin: `shahvidit15@gmail.com` (Password: `admin123` or Sign in with Google)
+- Default Admin: `admin@restro.com` (Password: `admin123`)
 in admin pages also, enhance the ui
 http://localhost:5173/admin/login
 
